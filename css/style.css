@@ -1,0 +1,68 @@
+body{
+    background-color: rgb(20, 20, 20);
+    font-family: sans-serif;
+    margin: 0;
+
+}
+
+a{
+    text-decoration: none;
+    color: black;
+}
+
+header{
+    background-image:url('/img/fondo.jpg');
+    background-size: 100%;
+    background-color: transparent;
+    display: flex;
+    min-height: 80px;
+    border-style:solid;
+    border-width: 1px;
+    border-color: rgb(68, 68, 68);
+
+   
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.LoloVillarreal{
+    color: white;
+}
+
+.logo{
+    display: flex;
+    align-items: center;
+}
+
+.logo img{
+    height: 100px;
+    margin-right: 10px;
+   
+}
+
+nav a{
+    color:white;
+   
+    font-weight: 600;
+    padding-right: 10px;
+    align-items: center;
+}
+
+nav a:hover{
+   
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 2px;
+    color: darkred;
+}
+
+@media (max-width:700px){
+    header{
+        flex-direction: column;
+    }
+
+    nav{
+        padding: 10px 0px;
+    }
+}
