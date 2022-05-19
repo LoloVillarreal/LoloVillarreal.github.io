@@ -1,7 +1,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500&display=swap');
 
-html, body {margin: 0; height: 100%; overflow: hidden}
+
 :root{
     --verde: #0c443a;
     --limon: #25d1b2;
@@ -15,7 +15,15 @@ html, body {margin: 0; height: 100%; overflow: hidden}
 html{
     font-size: 62.4%;
     overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    object-position: center;
+    scroll-behavior: smooth;
+    overflow-y: auto;
+   
 }
+
+
 
 *{
     font-family: 'Poppins', sans-serif;
@@ -190,6 +198,76 @@ section{
     font-size: 1.3rem;
     color: #666;
     padding: 1rem 0;
+}
+
+.footer{
+    padding-top: 3rem;
+    background: url(../img/footer-fondo.png)no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+.footer .caja-contenedor{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.footer .caja-contenedor .caja{
+    flex: 1 1 25rem;
+    margin: 2rem;
+}
+
+.footer .caja-contenedor .caja h3{
+    font-size: 2.5rem;
+    padding: 1rem 0;
+    color: wheat;
+    text-decoration: underline;
+    text-underline-offset: 1rem;
+
+}
+
+.footer .caja-contenedor .caja p{
+    font-size: 1.5rem;
+    padding: .5rem 0;
+    color: whitesmoke;
+}
+
+.footer .caja-contenedor .caja a{
+    display: block;
+    font-size: 1.5rem;
+    padding: .5rem 0;
+    color: wheat;
+}
+
+.footer .caja-contenedor .caja a:hover{
+    text-decoration: underline;
+}
+
+.footer .caja-contenedor .caja .info{
+    display: flex;
+    align-items: center;
+}
+
+.footer .caja-contenedor .caja .info i{
+    margin: .5rem 0;
+    margin-right: 1rem;
+    border-radius: 50%;
+    background: whitesmoke;
+    color: var(--limon);
+    font-size: 1.8rem;
+    height: 4.5rem;
+    width: 4.5rem;
+    line-height: 4.5rem;
+    text-align: center;
+}
+
+.footer .creditos{
+    font-size: 2rem;
+    font-weight: normal;
+    letter-spacing: .1rem;
+    color: wheat;
+    border-top: .1rem solid wheat;
+    text-align: center;
 }
 
 
