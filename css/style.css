@@ -1,6 +1,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500&display=swap');
 
+html, body {margin: 0; height: 100%; overflow: hidden}
 :root{
     --verde: #0c443a;
     --limon: #25d1b2;
@@ -97,6 +98,21 @@ section{
     transform: scale(1.1);
 }
 
+.heading{
+    position: fixed;
+    text-align: center;
+    background: var(--verde);
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-transform: uppercase;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
 .inicio{
     display: flex;
     align-items: center;
@@ -139,10 +155,48 @@ section{
     padding: 1rem 0;
 }
 
+.img1{
+    position: fixed;
+    size: 20%;
+}
+
+.detalles .caja-contenedor{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.detalles .caja-contenedor .caja{
+    flex: 1 1 30rem;
+    background: white;
+    border-radius: .5rem;
+    border: .1rem solid rgba(0, 0, 0, .2);
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+    margin: 1.5rem;
+    padding: 3rem 2rem;
+    border-radius: .5rem;
+    text-align: center;
+    transition: .2s linear;
+}
+
+.detalles .caja-contenedor .caja h3{
+    font-size: 2rem;
+    color: #333;
+    padding-top: 1rem;
+}
+
+.detalles .caja-contenedor .caja p{
+    font-size: 1.3rem;
+    color: #666;
+    padding: 1rem 0;
+}
+
+
 
 @media (max-width:1200px){
     html{
-        font-size: 55%;
+        font-size:  60%;
     }
 }
 
@@ -194,6 +248,9 @@ section{
     .inicio .content p{
         font-size: 1.5rem;
     }
+
+
+
 }
 
 @media (max-width:450px){
