@@ -1,68 +1,203 @@
-body{
-    background-color: rgb(20, 20, 20);
-    font-family: sans-serif;
-    margin: 0;
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500&display=swap');
+
+:root{
+    --verde: #0c443a;
+    --limon: #25d1b2;
+    --degradado:linear-gradient(90deg, var(--limon),var(--verde));
 
 }
+*::selection{
+    background: var(--limon);
+    color: white;   
+}
+html{
+    font-size: 62.4%;
+    overflow: hidden;
+}
 
-a{
+*{
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
     text-decoration: none;
-    color: black;
+    outline: none;
+    border: none;
+    text-transform: capitalize;
 }
 
 header{
-    background-image:url('/img/fondo.jpg');
-    background-size: 100%;
-    background-color: transparent;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
     display: flex;
-    min-height: 80px;
-    border-style:solid;
-    border-width: 1px;
-    border-color: rgb(68, 68, 68);
-
-   
+    padding: 2rem 9%;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    padding: 10px;
+    z-index: 1000;
+}
+header .logo{
+    font-size: 2rem;
+    color: var(--verde);
+}
+header .logo span{
+    color:var(--limon)
+}
+header .navbar a{
+    font-size: 1.8rem;
+    margin-left: 2rem;
+    color: var(--verde);
+
+}
+header .navbar a:hover{
+    color: var(--limon);
 }
 
-.LoloVillarreal{
+header input{
+    display: none;
+}
+
+
+header label{
+    font-size: 3rem;
+    color: var(--verde);
+    cursor: pointer;
+    visibility: hidden;
+    opacity: 0;
+}
+
+body{
+    background: #f9f9f9;
+}
+
+section{
+    min-height: 100vh;
+    padding: 0 9%;
+    padding-top: 7.5rem;
+    padding-bottom: 2rem;
+}
+.btn{
+    display: inline-block;
+    margin-top: 1rem;
+    padding: .8rem 3rem;
+    border-radius: 5rem;
+    background: var(--degradado);
+    font-size: 1.8rem;
     color: white;
+    cursor: pointer;
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+    transition: all .3s linear;
 }
 
-.logo{
+.btn:hover{
+    transform: scale(1.1);
+}
+
+.inicio{
     display: flex;
     align-items: center;
+    justify-content: center;
+    background: url(../img/inicio_fondo.png) no-repeat;
+    background-size: cover;
+    background-position: center;
 }
 
-.logo img{
-    height: 100px;
-    margin-right: 10px;
-   
+.inicio .image img{
+    width: 40vw;
+    animation: float 3s linear infinite;
 }
 
-nav a{
-    color:white;
-   
-    font-weight: 600;
-    padding-right: 10px;
-    align-items: center;
-}
+@keyframes float{
+    0%, 100%{
+        transform: translateY(0rem);
 
-nav a:hover{
-   
-    border-style: solid;
-    border-width: 1px;
-    border-radius: 2px;
-    color: darkred;
-}
-
-@media (max-width:700px){
-    header{
-        flex-direction: column;
     }
+    50%{
+        transform: translateY(-3.5rem);
+    }
+}
 
-    nav{
-        padding: 10px 0px;
+.inicio .content h3{
+    font-size: 5.5rem;
+    color: #333;
+    text-transform: uppercase;
+
+}
+
+.inicio .content h3 span {
+    color: var(--limon);
+    text-transform: uppercase;
+}
+
+.inicio .content p{
+    font-size: 1.7rem;
+    color:#666;
+    padding: 1rem 0;
+}
+
+
+@media (max-width:1200px){
+    html{
+        font-size: 55%;
+    }
+}
+
+
+
+@media (max-width:768px){
+    header label{
+        visibility: visible;
+        opacity: 1;
+    }
+    header .navbar{
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: white;
+        padding: 1rem 2rem;
+        border-top: .1rem solid rgba(0, 0, 0, .2);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+        transform-origin: top;
+        transform: scaleY(0);
+        opacity: 0;
+
+    }
+    header .navbar a{
+        display: block;
+        margin: 2rem 0;
+        font-size: 2rem;
+
+    }
+    header input:checked ~ .navbar{
+        transform: scaleY(1);
+        opacity: 1;
+    }
+    header input:checked ~ label::before{
+        content: '\f00d'
+    }
+   
+
+    .inicio{
+        flex-flow: column-reverse;
+    }
+    .inicio .image img{
+        width: 100%;   
+    }
+    .inicio .content h3{
+        font-size: 3.6rem;
+    }
+    .inicio .content p{
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width:450px){
+    html{
+        font-size: 49%;
     }
 }
