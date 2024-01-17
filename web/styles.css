@@ -1,0 +1,252 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: black;
+   }
+   
+   #background 
+  { 
+       left: 0px; 
+       top: 0px; 
+       position: relative; 
+       margin-left: auto; 
+       margin-right: auto; 
+       width: 1920px;
+       height: 1080px; 
+       overflow: hidden;
+       z-index:0;
+      } 
+  
+   #unnamed 
+  { 
+       left: 0px; 
+       top: 140px; 
+       position: absolute; 
+       width: 1920px;
+       height: 800px;
+       z-index:1;
+  } 
+  
+   #puntadepaladeobra 
+  { 
+       left: 1571px; 
+       top: 477px; 
+       position: absolute; 
+       width: 349px;
+       height: 279px;
+       z-index:2;
+  } 
+  
+   #palodemadera 
+  { 
+       left: 862px; 
+       top: 385px; 
+       position: absolute; 
+       width: 401px;
+       height: 163px;
+       z-index:3;
+  } 
+  
+   #cascodeobra 
+  { 
+       left: 1121px; 
+       top: 75px; 
+       position: absolute; 
+       width: 503px;
+       height: 332px;
+       z-index:4;
+  } 
+  
+   #chaleconaranjadeobra 
+  { 
+       left: 995px; 
+       top: 459px; 
+       position: absolute; 
+       width: 705px;
+       height: 507px;
+       z-index:5;
+  } 
+  
+   #Rellenogenerativo 
+  { 
+       left: -82px; 
+       top: -18px; 
+       position: absolute; 
+       width: 2032px;
+       height: 1151px;
+       z-index:6;
+  } 
+  
+   #Capa1 
+  { 
+       left: -129px; 
+       top: -44px; 
+       position: absolute; 
+       width: 1089px;
+       height: 570px;
+       z-index:7;
+  } 
+  
+   #Capa2 
+  { 
+       left: -99px; 
+       top: 532px; 
+       position: absolute; 
+       width: 1520px;
+       height: 816px;
+       z-index:8;
+  } 
+  
+   #CHB 
+  { 
+       left: 34px; 
+       top: 50px; 
+       position: absolute; 
+       width: 168px;
+       height: 74px;
+       z-index:9;
+  } 
+  
+   #CHAMBA 
+  { 
+       left: 35px; 
+       top: 136px; 
+       position: absolute; 
+       width: 170px;
+       height: 29px;
+       z-index:10;
+  } 
+  
+   #Lnea1 
+  { 
+       left: 35px; 
+       top: 126px; 
+       position: absolute; 
+       width: 168px;
+       height: 7px;
+       z-index:11;
+  } 
+  
+   #MiPRIMERA 
+  { 
+       left: 34px; 
+       top: 302px; 
+       position: absolute; 
+       width: 760px;
+       height: 85px;
+       z-index:12;
+  } 
+  
+   #CHAMBA_0 
+  { 
+       left: 28px; 
+       top: 403px; 
+       position: absolute; 
+       width: 771px;
+       height: 150px;
+       z-index:13;
+  } 
+  
+   #Rectngulo1 
+  { 
+       left: 37px; 
+       top: 615px; 
+       position: absolute; 
+       width: 418px;
+       height: 93px;
+       z-index:14;
+  } 
+  
+   #Rectngulo1copia 
+  { 
+       left: 37px; 
+       top: 735px; 
+       position: absolute; 
+       width: 418px;
+       height: 93px;
+       z-index:15;
+  } 
+  
+   #Rectngulo1copia2 
+  { 
+       left: 37px; 
+       top: 855px; 
+       position: absolute; 
+       width: 418px;
+       height: 93px;
+       z-index:16;
+  } 
+  
+   #Rectngulo1copia3 
+  { 
+       left: 37px; 
+       top: 855px; 
+       position: absolute; 
+       width: 418px;
+       height: 93px;
+       z-index:17;
+  } 
+  
+   #HOME 
+  { 
+       left: 170px; 
+       top: 585px; 
+       position: absolute; 
+       width: 123px;
+       height: 29px;
+       z-index:18;
+       font-size: 50px;
+       font-family: Arial, Helvetica, sans-serif;
+  } 
+  
+   #whatsisCHAMBA 
+  { 
+       left: 80px; 
+       top: 728px; 
+       position: absolute; 
+       width: 350px;
+       height: 25px;
+       z-index:19;
+       font-size: 35px;
+       font-family: Arial, Helvetica, sans-serif;
+  } 
+  p:hover{
+    color: orange;
+  }
+  
+   #CHAMBAPEDIA 
+  { 
+       left: 105px; 
+       top: 848px; 
+       position: absolute; 
+       width: 311px;
+       height: 29px;
+       z-index:20;
+       font-size: 35px;
+       font-family: Arial, Helvetica, sans-serif;
+  } 
+  
+   #Capa3 
+  { 
+       left: 1712px; 
+       top: 1009px; 
+       position: absolute; 
+       width: 190px;
+       height: 64px;
+       z-index:21;
+  } 
+  
+   #Capa4 
+  { 
+       left: 1603px; 
+       top: 1013px; 
+       position: absolute; 
+       width: 76px;
+       height: 60px;
+       z-index:22;
+  } 
+  img {
+    max-width: 100%;
+    height: auto;
+}
