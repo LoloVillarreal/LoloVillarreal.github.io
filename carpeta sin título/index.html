@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego La Ruleta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>La Ruleta</h1>
+        <div id="menu">
+            <button onclick="playGame()">Jugar a la Ruleta</button>
+            <button onclick="showInfo()">Información</button>
+            <button onclick="checkBalance()">Consultar Saldo</button>
+        </div>
+        <div id="game" style="display:none;">
+            <h2>Resultado del Giro</h2>
+            <p id="result"></p>
+            <button onclick="placeBet()">Hacer Apuesta</button>
+            <button onclick="backToMenu()">Regresar al Menú</button>
+        </div>
+        <div id="info" style="display:none;">
+            <p>Información sobre cómo jugar y las opciones de apuestas disponibles.</p>
+            <button onclick="backToMenu()">Regresar al Menú</button>
+        </div>
+        <div id="balance" style="display:none;">
+            <p>Saldo Actual: <span id="saldo">100</span></p>
+            <button onclick="backToMenu()">Regresar al Menú</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
