@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['apple-touch-icon.png', 'offline.html'],
       manifest: {
-        name: 'Glute & Core',
-        short_name: 'Glute & Core',
-        description: 'Entrenamiento, nutrición y progreso con enfoque saludable.',
+        name: 'PLAN Lolo & alexia',
+        short_name: 'Lolo & alexia',
+        description: 'Tu guía de entrenamiento, ideas para comer y progreso privado.',
         theme_color: '#F6F3EC',
         background_color: '#F6F3EC',
         display: 'standalone',
@@ -27,7 +27,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,webp,svg,woff2}'],
         navigateFallback: 'index.html',
         runtimeCaching: [
           {

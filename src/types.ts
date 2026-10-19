@@ -72,6 +72,8 @@ export type ProgressLog = {
   sleep: number
   notes: string
   photo?: string
+  hipThrustKg?: number
+  hipThrustReps?: number
 }
 
 export type Food = {
@@ -102,11 +104,15 @@ export type AppSettings = {
 }
 
 export type Backup = {
-  schemaVersion: 1
+  schemaVersion: 1 | 2
   exportedAt: string
   workoutLogs: WorkoutLog[]
   cardioLogs: CardioLog[]
   progressLogs: ProgressLog[]
   mealChecks: Record<string, boolean>
   settings: AppSettings
+  localState?: Record<string, unknown>
 }
+
+export type ProgressDraft = { id:string; date:string; weight:string; waist:string; hip:string; hipThrustKg:string; hipThrustReps:string; energy:number; sleep:string; notes:string; photo:string }
+export type CalculatorProfile = { age:string; height:string; weight:string; activity:number; sex:'female'|'male'; calories:string; protein:string; fat:string }

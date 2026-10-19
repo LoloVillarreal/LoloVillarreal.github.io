@@ -1,0 +1,121 @@
+{
+  "D57C2EC7": {
+    "id": "D57C2EC7",
+    "title": "Hip Thrust (Barbell)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/10601101-Barbell-Hip-Thrust_Hips_small_thumbnail@3x.jpg",
+    "equipment": "barbell",
+    "primary_muscle_group": "glutes"
+  },
+  "2B4B7310": {
+    "id": "2B4B7310",
+    "title": "Romanian Deadlift (Barbell)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/00851201-Barbell-Romanian-Deadlift_Hips-FIX_thumbnail_@3x.jpg",
+    "equipment": "barbell",
+    "primary_muscle_group": "hamstrings"
+  },
+  "B5D3A742": {
+    "id": "B5D3A742",
+    "title": "Bulgarian Split Squat (Dumbbell)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/04101201-Dumbbell-Single-Leg-Split-Squat_Thighs_thumbnail_@3x.jpg",
+    "equipment": "dumbbell",
+    "primary_muscle_group": "quadriceps"
+  },
+  "B8127AD1": {
+    "id": "B8127AD1",
+    "title": "Lying Leg Curl (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05861201-Lever-Lying-Leg-Curl_Thighs_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "hamstrings"
+  },
+  "F4B4C6EE": {
+    "id": "F4B4C6EE",
+    "title": "Hip Abduction (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05971201-Lever-Seated-Hip-Abduction_Hips_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "abductors"
+  },
+  "6A6C31A5": {
+    "id": "6A6C31A5",
+    "title": "Lat Pulldown (Cable)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01501201-Cable-Bar-Lateral-Pulldown_Back_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "lats"
+  },
+  "1DF4A847": {
+    "id": "1DF4A847",
+    "title": "Seated Row (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/22651201-Lever-Seated-Row-(version-2)_Back_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "upper_back"
+  },
+  "7EB3F7C3": {
+    "id": "7EB3F7C3",
+    "title": "Chest Press (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05771201-Lever-Chest-Press_Chest_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "chest"
+  },
+  "422B08F1": {
+    "id": "422B08F1",
+    "title": "Lateral Raise (Dumbbell)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/03341201-Dumbbell-Lateral-Raise_shoulder_thumbnail@3x.jpg",
+    "equipment": "dumbbell",
+    "primary_muscle_group": "shoulders"
+  },
+  "23A48484": {
+    "id": "23A48484",
+    "title": "Cable Crunch",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01751201-Cable-Kneeling-Crunch_Waist_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "abdominals"
+  },
+  "C6C9B8A0": {
+    "id": "C6C9B8A0",
+    "title": "Plank",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/04631201-Front-Plank-m_waist_thumbnail@3x.jpg",
+    "equipment": "none",
+    "primary_muscle_group": "abdominals"
+  },
+  "E3EDA509": {
+    "id": "E3EDA509",
+    "title": "Side Plank",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/07151201-Side-Plank-m_Waist_thumbnail@3x.jpg",
+    "equipment": "none",
+    "primary_muscle_group": "abdominals"
+  },
+  "C7973E0E": {
+    "id": "C7973E0E",
+    "title": "Leg Press (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/07391201-Sled-45-Leg-Press_Hips_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "quadriceps"
+  },
+  "FFDA283B": {
+    "id": "FFDA283B",
+    "title": "Reverse Lunge (Dumbbell)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/03811201-Dumbbell-Rear-Lunge_Thighs_thumbnail@3x.jpg",
+    "equipment": "dumbbell",
+    "primary_muscle_group": "quadriceps"
+  },
+  "75A4F6C4": {
+    "id": "75A4F6C4",
+    "title": "Leg Extension (Machine)",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05851201-Lever-Leg-Extension_Thighs_thumbnail@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "quadriceps"
+  },
+  "ACB2751D": {
+    "id": "ACB2751D",
+    "title": "Standing Cable Glute Kickbacks",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/60401201-Cable-Donkey-Kickback-(male)_Hips_thumbnail_@3x.jpg",
+    "equipment": "machine",
+    "primary_muscle_group": "glutes"
+  },
+  "F8356514": {
+    "id": "F8356514",
+    "title": "Hanging Leg Raise",
+    "thumbnail_url": "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/04751201-Hanging-Straight-Leg-Raise_Hips-FIX_thumbnail_@3x.jpg",
+    "equipment": "none",
+    "primary_muscle_group": "abdominals"
+  }
+}

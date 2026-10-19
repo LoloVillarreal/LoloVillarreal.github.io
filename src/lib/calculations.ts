@@ -46,6 +46,13 @@ export function movingAverage(logs:ProgressLog[], window=3) {
   })
 }
 
+export function hipThrustProgress(logs:ProgressLog[]){
+  const history=logs.filter(x=>typeof x.hipThrustKg==='number'&&Number.isFinite(x.hipThrustKg)&&x.hipThrustKg>=0).sort((a,b)=>a.date.localeCompare(b.date))
+  const first=history[0],latest=history[history.length-1]
+  const best=history.reduce<ProgressLog|undefined>((record,entry)=>!record||entry.hipThrustKg!>record.hipThrustKg!?entry:record,undefined)
+  return {history,first,latest,best,gain:best&&first?best.hipThrustKg!-first.hipThrustKg!:0}
+}
+
 export function workingVolume(sets:SetLog[]) {
   return sets.filter(s=>s.kind==='working'&&s.done).reduce((sum,s)=>sum+(s.weight??0)*(s.reps??0),0)
 }

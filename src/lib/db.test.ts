@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { clearAll, getAll, importBackup, loadBackup, put, validateBackup } from './db'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { clearAll, defaultSettings, getAll, getKV, importBackup, loadBackup, put, setKV, validateBackup } from './db'
 import type { ProgressLog } from '../types'
 
 describe('persistencia IndexedDB',()=>{
@@ -16,5 +16,28 @@ describe('persistencia IndexedDB',()=>{
     expect(validateBackup(backup)).toBe(true)
     await clearAll();await importBackup(backup)
     expect((await getAll<ProgressLog>('progressLogs')).length).toBe(1)
+  })
+  it('restaura las copias antiguas sin exigir campos nuevos',async()=>{
+    const old={schemaVersion:1 as const,exportedAt:new Date().toISOString(),workoutLogs:[],cardioLogs:[],progressLogs:[{id:'old',date:'2026-10-01',energy:3,sleep:8,notes:'anterior',photo:'data:image/png;base64,AA=='}],mealChecks:{'2026-10-01-breakfast':true},settings:defaultSettings}
+    expect(validateBackup(old)).toBe(true);await importBackup(old)
+    expect((await getAll<ProgressLog>('progressLogs'))[0].photo).toBe(old.progressLogs[0].photo)
+  })
+  it('incluye el nuevo progreso y preferencias sin perderlos al restaurar',async()=>{
+    await put('progressLogs',{id:'strength',date:'2026-10-01',energy:3,sleep:8,notes:'',hipThrustKg:60,hipThrustReps:10})
+    await setKV('guideWeek',4);const backup=await loadBackup();expect(validateBackup(backup)).toBe(true)
+    await clearAll();await importBackup(backup);expect(await getKV('guideWeek',1)).toBe(4);expect((await getAll<ProgressLog>('progressLogs'))[0].hipThrustKg).toBe(60)
+  })
+  it('rechaza archivos dañados antes de tocar los registros existentes',async()=>{
+    await put('progressLogs',{id:'safe',date:'2026-10-01',energy:3,sleep:8,notes:''})
+    const bad={...await loadBackup(),progressLogs:[{id:'bad'}]} as never
+    expect(validateBackup(bad)).toBe(false);await expect(importBackup(bad)).rejects.toThrow();expect((await getAll<ProgressLog>('progressLogs'))[0].id).toBe('safe')
+  })
+  it('revierte toda la restauración si falla una escritura',async()=>{
+    await put('progressLogs',{id:'safe',date:'2026-10-01',energy:3,sleep:8,notes:''})
+    const backup=await loadBackup();backup.progressLogs[0].id='new'
+    const original=IDBObjectStore.prototype.put
+    const spy=vi.spyOn(IDBObjectStore.prototype,'put').mockImplementation(function(this:IDBObjectStore,value,key){if(this.name==='progressLogs'&&value.id==='new')throw new DOMException('Simulated failure','QuotaExceededError');return original.call(this,value,key)})
+    try{await expect(importBackup(backup)).rejects.toThrow('Simulated failure')}finally{spy.mockRestore()}
+    expect((await getAll<ProgressLog>('progressLogs'))[0].id).toBe('safe')
   })
 })
