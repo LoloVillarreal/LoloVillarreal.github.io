@@ -5,7 +5,18 @@ import { defaultSettings } from './db'
 import type { Backup, ProgressLog } from '../types'
 import { backupJson, download } from './files'
 
-export const supabase=createClient(config.url,config.publishableKey)
+export const supabase=createClient(config.url,config.publishableKey,{
+  auth:{persistSession:true,autoRefreshToken:true},
+  global:{fetch:async(input,init)=>{
+    const controller=new AbortController(),signal=init?.signal
+    const abort=()=>controller.abort()
+    if(signal?.aborted)abort()
+    else signal?.addEventListener('abort',abort,{once:true})
+    const timeout=window.setTimeout(abort,15000)
+    try{return await fetch(input,{...init,signal:controller.signal})}
+    finally{clearTimeout(timeout);signal?.removeEventListener('abort',abort)}
+  }}
+})
 type Account={
   session:Session|null;loading:boolean;saving:boolean;error:string;values:Record<string,unknown>
   set:(key:string,next:unknown|((previous:unknown)=>unknown))=>void
@@ -118,12 +129,16 @@ export function AccountPanel(){
   const submit=async(e:React.FormEvent)=>{
     e.preventDefault();setBusy(true);setMessage('')
     try{
-      const result=await supabase.auth.signInWithPassword({email,password})
-      if(result.error)throw result.error
+      const result=await supabase.auth.signInWithPassword({email:email.trim(),password})
+      if(result.error){
+        setMessage(result.error.code==='invalid_credentials'?'Correo o contraseña incorrectos. Usa la contraseña creada para este plan; no la de tu correo.':result.error.code==='email_not_confirmed'?'Esta cuenta todavía necesita confirmación. Pide a Lolo que revise su activación.':result.error.status===429?'Demasiados intentos. Espera unos minutos antes de volver a entrar.':'No se pudo entrar. Revisa la conexión y vuelve a intentarlo.')
+        return
+      }
       setPassword('')
-    }catch(e){const reason=e instanceof Error?e.message:'';setMessage(reason.includes('Invalid login')?'Correo o contraseña incorrectos.':reason.includes('Email not confirmed')?'Esta cuenta todavía necesita confirmación. Pide a Lolo que revise su activación.':'No se pudo entrar. Revisa la conexión y vuelve a intentarlo.')}finally{setBusy(false)}
+    }catch{setMessage('La conexión no respondió. Comprueba internet y vuelve a intentarlo.')}finally{setBusy(false)}
   }
-  if(account.session)return <section className="card account-panel"><p className="eyebrow">TU CUENTA PRIVADA</p><h2>Tu progreso, contigo</h2><p>{account.session.user.email}</p><p className="small-note">Inicia sesión con esta misma cuenta en otro dispositivo para recuperar tus datos.</p><div className="button-row"><button className="secondary" disabled={account.saving} onClick={()=>account.refresh().catch(()=>setMessage('No se pudo actualizar.'))}>Actualizar datos</button><button className="text-button" disabled={account.saving} onClick={()=>account.logout().catch(()=>setMessage('Guarda o exporta tus cambios antes de salir.'))}>Cerrar sesión</button></div>{message&&<p role="status">{message}</p>}</section>
+  if(!account.session&&account.loading)return <section className="card account-panel" role="status"><p>Recuperando tu sesión…</p></section>
+  if(account.session)return <section className="card account-panel"><p className="eyebrow">TU CUENTA PRIVADA</p><h2>Tu progreso, contigo</h2><p>{account.session.user.email}</p><p className="small-note">Tu sesión se mantiene en este navegador hasta que cierres sesión o se borren sus datos. En otro dispositivo, entra con esta misma cuenta para recuperar tu progreso.</p><div className="button-row"><button className="secondary" disabled={account.saving} onClick={()=>account.refresh().catch(()=>setMessage('No se pudo actualizar.'))}>Actualizar datos</button><button className="text-button" disabled={account.saving} onClick={()=>account.logout().catch(()=>setMessage('Guarda o exporta tus cambios antes de salir.'))}>Cerrar sesión</button></div>{message&&<p role="status">{message}</p>}</section>
   return <section className="card account-panel"><p className="eyebrow">GUARDADO PRIVADO EN LA NUBE</p><h2>Entra para recuperar tus datos</h2><p>La guía es abierta. Tus registros y calculadoras se guardan en tu cuenta para acceder desde otros dispositivos.</p><form onSubmit={submit}><label>Correo electrónico<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Entrar'}</button></form><details><summary>Cómo entrar por primera vez</summary><p>Usa el correo y la contraseña de la cuenta que habéis creado para este plan. Es independiente de Hevy. Si necesitas recuperar el acceso, Lolo puede restablecerlo desde el panel privado.</p></details>{message&&<p role="status">{message}</p>}</section>
 }
 
