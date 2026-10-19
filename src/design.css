@@ -181,3 +181,50 @@ input[type='checkbox'] { min-height: auto; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Per-date routine selection. */
+.training-choice { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+.training-choice h2 { font-size: 22px; }
+.training-choice .primary { flex-shrink: 0; }
+.training-choice p { margin-bottom: 0; }
+.training-planner { grid-column: 1 / -1; }
+.routine-picker { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin: 20px 0; }
+.routine-option { text-align: left; padding: 15px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface2); min-height: 82px; }
+.routine-option strong, .routine-option span { display: block; }
+.routine-option strong { font-size: 13px; line-height: 1.4; }
+.routine-option span { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.planned-exercises { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+.planned-exercise { padding: 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); }
+.planned-exercise-title { display: flex; align-items: center; gap: 12px; }
+.planned-exercise-title img { border-radius: 12px; flex-shrink: 0; background: white; object-fit: contain; }
+.planned-exercise-title h3 { font-size: 15px; line-height: 1.4; }
+.planned-exercise-title .eyebrow { font-size: 9px; }
+.planned-fields { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
+.planned-fields label { font-size: 10px; margin: 14px 0 4px; }
+.planned-fields input { padding: 10px 4px; text-align: center; }
+.exercise-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.exercise-actions .icon-button { width: 44px; height: 44px; background: var(--surface); box-shadow: none; }
+.exercise-actions .text-button { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.exercise-library { margin-top: 20px; padding: 18px; border-radius: 20px; background: var(--surface2); }
+.library-results { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; border-radius: 14px; }
+.library-exercise { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px 8px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); min-height: 72px; }
+.library-exercise img { flex-shrink: 0; background: white; border-radius: 10px; object-fit: contain; }
+.library-exercise > span:first-of-type { flex: 1; min-width: 0; }
+.library-exercise strong { display: block; font-size: 12px; line-height: 1.4; }
+.library-exercise small, .library-exercise > span:last-child { font-size: 10px; color: var(--muted); }
+.library-exercise:disabled { cursor: default; opacity: .65; }
+.copy-training { padding: 16px 0; font-size: 13px; }
+.day-scroller button { position: relative; }
+.day-scroller .has-plan::after { content: ''; position: absolute; bottom: 4px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.love-note { position: relative; justify-self: end; padding: 0 8px; text-align: right; }
+.love-note button { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-height: 44px; padding: 6px; border: 0; background: transparent; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.love-note button span { font-size: 9px; letter-spacing: .06em; }
+.love-heart { position: absolute; right: 8px; bottom: 46px; font-size: 54px; color: var(--coral); line-height: 1; pointer-events: none; animation: love-bloom 650ms ease-out both; }
+@keyframes love-bloom { from { opacity: 0; transform: translateY(12px) scale(.25) rotate(-15deg); } 70% { opacity: 1; transform: translateY(-5px) scale(1.15) rotate(5deg); } to { opacity: 1; transform: translateY(-3px) scale(1) rotate(0); } }
+@media (max-width: 600px) {
+  .training-choice { align-items: stretch; flex-direction: column; gap: 12px; }
+  .training-planner > .section-head { align-items: flex-start; }
+  .training-planner > .section-head h3 { font-size: 14px; }
+  .training-planner .section-head .secondary { font-size: 11px; padding: 10px; }
+}
+@media (min-width: 850px) { .routine-picker { grid-template-columns: repeat(3,minmax(0,1fr)); } }
