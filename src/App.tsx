@@ -60,7 +60,7 @@ function Workspace(){
     {needRefresh&&<div className="update-banner"><RefreshCw size={18}/><span>Nueva versión disponible</span><button disabled={storage.saving||account.saving||!!storage.error||!!account.error} onClick={async()=>{try{await storage.flush();await account.flush();await updateServiceWorker(true)}catch{notify('Guarda los cambios antes de actualizar.')}}}>Actualizar</button></div>}
     <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><button className="icon-button" aria-label="Cambiar tema" onClick={()=>saveSettings(v=>({...v,darkMode:!v.darkMode}))}>{settings.darkMode?<Sun/>:<Moon/>}</button></header>
     <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':'Tu guía disponible sin conexión'}</>}</div>
-    <main>
+    <main className={`workspace workspace--${section}`}>
       {section==='home'&&<HomeScreen go={go}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))}/>}
       {section==='nutrition'&&<NutritionScreen/>}
@@ -68,7 +68,7 @@ function Workspace(){
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>setNavigation(v=>({...v,tab}))} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     {toast&&<div className="toast" role="status">{toast}</div>}
-    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Guía',Home],['training','Entrenos',Dumbbell],['nutrition','Nutrición',Salad],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><Icon/><span>{label}</span></button>)}</nav>
+    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Guía',Home],['training','Entrenos',Dumbbell],['nutrition','Nutrición',Salad],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
   </div>
 }
 
