@@ -24,9 +24,18 @@ function Workspace(){
   const [loadError,setLoadError]=useState(false)
   const [online,setOnline]=useState(navigator.onLine)
   const [toast,notify]=useState('')
+  const [registration,setRegistration]=useState<ServiceWorkerRegistration>()
   const {needRefresh:[needRefresh],updateServiceWorker}=useRegisterSW({onRegisteredSW(_url,registration){
-    if(registration)window.addEventListener('focus',()=>{if(navigator.onLine)void registration.update().catch(()=>{})})
+    setRegistration(registration)
   }})
+  useEffect(()=>{
+    if(!registration)return
+    const check=()=>{if(navigator.onLine&&document.visibilityState==='visible')void registration.update().catch(()=>{})}
+    check()
+    const interval=window.setInterval(check,60000)
+    window.addEventListener('focus',check);window.addEventListener('online',check)
+    return()=>{clearInterval(interval);window.removeEventListener('focus',check);window.removeEventListener('online',check)}
+  },[registration])
   const reload=async()=>{
     const [w,c,p]=await Promise.all([getAll<WorkoutLog>('workoutLogs'),getAll<CardioLog>('cardioLogs'),getAll<ProgressLog>('progressLogs')])
     setWorkoutLogs(w);setCardioLogs(c);setProgressLogs(p);setReady(true);setLoadError(false)
@@ -63,5 +72,5 @@ function Workspace(){
   </div>
 }
 
-function Koala(){return <img className="koala-logo" src="./koala-la.png" alt="Koala L&A" width="64" height="64"/>}
+function Koala(){return <img className="koala-logo" src="./plan-la-koala.png" alt="Koala L&A" width="64" height="64"/>}
 export default App

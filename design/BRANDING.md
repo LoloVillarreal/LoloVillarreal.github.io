@@ -2,7 +2,7 @@
 
 ## Koala L&A
 
-Generado con la herramienta integrada ImageGen; original en `design/koala-la-source.png`, recurso preparado en `public/koala-la.png`, e iconos derivados de 180, 192 y 512 px, con versión maskable. Animación suave mediante CSS; reduce movimiento la desactiva.
+Generado con la herramienta integrada ImageGen; original en `design/koala-la-source.png`, recurso preparado en `public/plan-la-koala.png`, e iconos derivados de 180, 192 y 512 px, con versión maskable. Se recortaron los márgenes transparentes para mejorar la legibilidad, se renovaron las rutas de iconos y se actualizaron también favicon e icono SVG. Las rutas anteriores se conservan como alias compatibles. Animación suave mediante CSS; reduce movimiento la desactiva.
 
 Prompt final:
 

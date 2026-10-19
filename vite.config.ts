@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['apple-touch-icon.png', 'offline.html'],
+      includeAssets: ['plan-la-apple-touch.png', 'offline.html'],
       manifest: {
         name: 'PLAN Lolo & alexia',
         short_name: 'Lolo & alexia',
@@ -21,9 +21,9 @@ export default defineConfig({
         lang: 'es',
         categories: ['fitness', 'health', 'lifestyle'],
         icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: 'pwa-512x512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: 'plan-la-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'plan-la-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'plan-la-icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
