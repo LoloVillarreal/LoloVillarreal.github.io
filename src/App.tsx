@@ -3,11 +3,13 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Check, Dumbbell, Home, Moon, RefreshCw, Salad, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
 import { StorageProvider, useStorage, useStored } from './lib/storage'
-import { AccountProvider, useAccount } from './lib/account'
+import { AccountPanel, AccountProvider, useAccount } from './lib/account'
 import { isoDate } from './lib/dates'
 import { backupJson, download } from './lib/files'
 import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
+import SectionSwitch from './SectionSwitch'
+import './access.css'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
 
 const PolicePanel=lazy(()=>import('./police/PolicePanel'))
@@ -70,13 +72,15 @@ function Workspace(){
   }
   const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
+  const themeControl=<button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button>
+  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="eyebrow">PLAN Lolo & alexia</p><h1>Vuestro espacio</h1></div>{themeControl}</header><AccountPanel/></div>
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
-  if(police)return <Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel/></Suspense>
+  if(police)return <Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense>
   const section=navigation.section
   return <div className="app-shell">
     {!online&&<div className="offline-banner"><WifiOff size={16}/> Guía sin conexión · necesitas internet para sincronizar tus datos</div>}
     {needRefresh&&<div className="update-banner"><RefreshCw size={18}/><span>Nueva versión disponible</span><button disabled={trainingDirty||storage.saving||account.saving||!!storage.error||!!account.error} onClick={async()=>{try{await storage.flush();await account.flush();await updateServiceWorker(true)}catch{notify('Guarda los cambios antes de actualizar.')}}}>Actualizar</button></div>}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button></header>
+    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':'Tu guía disponible sin conexión'}</>}</div>
     <main className={`workspace workspace--${section}`}>
       {section==='home'&&<HomeScreen go={go} reader={reader} startTraining={startTraining}/>}

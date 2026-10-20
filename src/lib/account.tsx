@@ -43,6 +43,8 @@ export function AccountProvider({children}:{children:ReactNode}){
     versions.current=new Map(result.data.map(row=>[row.key,{version:row.version,updated_at:row.updated_at}]));current.current=next;setValues(next);setError('');setLoading(false)
   }
   useEffect(()=>{
+    // Retire the old independent panel session; both sections now use this client.
+    try{localStorage.removeItem('plan-police-auth')}catch{}
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(owner.current!==(next?.user.id??null)){
         owner.current=next?.user.id??null;pending.current.clear();versions.current.clear();current.current={};setValues({});setLoading(!!next);setError('')
@@ -109,7 +111,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     await load()
     }finally{setLoading(false)}
   }
-  const logout=async()=>{await flush();const {error}=await supabase.auth.signOut();if(error)throw error}
+  const logout=async()=>{await flush();const {error}=await supabase.auth.signOut({scope:'local'});if(error)throw error}
   const discardAndReload=async()=>{if(pending.current.size&&!confirm('¿Descartar los cambios que todavía no están sincronizados y cargar la versión de tu cuenta? Exporta antes si quieres conservarlos.'))return;pending.current.clear();await load()}
   return <Context.Provider value={{session,loading,saving,error,values,set,flush,refresh,remove,restore,logout,discardAndReload}}>{children}</Context.Provider>
 }
@@ -140,7 +142,7 @@ export function AccountPanel(){
   }
   if(!account.session&&account.loading)return <section className="card account-panel" role="status"><p>Recuperando tu sesión…</p></section>
   if(account.session)return <section className="card account-panel"><p className="eyebrow">TU CUENTA PRIVADA</p><h2>Tu progreso, contigo</h2><p>{account.session.user.email}</p><p className="small-note">Tu sesión se mantiene en este navegador hasta que cierres sesión o se borren sus datos. En otro dispositivo, entra con esta misma cuenta para recuperar tu progreso.</p><div className="button-row"><button className="secondary" disabled={account.saving} onClick={()=>account.refresh().catch(()=>setMessage('No se pudo actualizar.'))}>Actualizar datos</button><button className="text-button" disabled={account.saving} onClick={()=>account.logout().catch(()=>setMessage('Guarda o exporta tus cambios antes de salir.'))}>Cerrar sesión</button></div>{message&&<p role="status">{message}</p>}</section>
-  return <section className="card account-panel"><p className="eyebrow">GUARDADO PRIVADO EN LA NUBE</p><h2>Entra para recuperar tus datos</h2><p>La guía es abierta. Tus registros y calculadoras se guardan en tu cuenta para acceder desde otros dispositivos.</p><form onSubmit={submit}><label>Correo electrónico<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Entrar'}</button></form><details><summary>Cómo entrar por primera vez</summary><p>Usa el correo y la contraseña de la cuenta que habéis creado para este plan. Es independiente de Hevy. Si necesitas recuperar el acceso, Lolo puede restablecerlo desde el panel privado.</p></details>{message&&<p role="status">{message}</p>}</section>
+  return <section className="card account-panel"><p className="eyebrow">GUARDADO PRIVADO EN LA NUBE</p><h2>Un acceso para los dos</h2><p>Inicia sesión con la cuenta de Alexia para abrir entrenamiento y Policía. Tus registros se guardan en la nube y la sesión se recuerda en este navegador.</p><form onSubmit={submit}><label>Correo electrónico<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Entrar'}</button></form><details><summary>Cómo entrar por primera vez</summary><p>Usa el correo y la contraseña de la cuenta que habéis creado para este plan. Es independiente de Hevy. Si necesitas recuperar el acceso, Lolo puede restablecerlo desde el panel privado.</p></details>{message&&<p role="status">{message}</p>}</section>
 }
 
 export function AccountGate({children}:{children:ReactNode}){

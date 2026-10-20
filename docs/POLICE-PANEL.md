@@ -3,13 +3,13 @@
 Entrada: Ajustes → Entrar al apartado Policía Nacional, o `/#police`.
 Panel privado de organización personal, sin contenido académico ni vinculación oficial.
 
-## Acceso pendiente de activar para Lolo
+## Acceso único
 
-Hace falta el **correo real de Lolo**. No se ha inventado un correo ni creado una cuenta personal simulada. El alias `lolo` se resolverá únicamente en la función `police-login`; la contraseña nunca forma parte del frontend. Las cuentas QA son temporales y se eliminan después de verificar.
+Toda la app muestra el inicio de sesión antes de abrir sus apartados. La cuenta existente de Alexia está autorizada en `police_members`; se utiliza su contraseña actual. No hace falta crear una cuenta para Lolo ni proporcionar otro correo.
 
-Para aprovisionar una cuenta nueva, un administrador ejecuta `node scripts/provision-police-user.mjs` con `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `POLICE_EMAIL` y `POLICE_PASSWORD` en el entorno local. No guardar estos valores en archivos versionados, variables VITE ni Pages. El script no modifica cuentas ya existentes ni reutiliza la cuenta de Alexia. Si el correo ya existe, revisar explícitamente la titularidad antes de asignar su UUID a `police_members`.
+Entrenamiento y Policía comparten el cliente y la sesión Supabase de la guía. El botón circular con gorra abre Policía; la mancuerna regresa al apartado de Alexia. La sesión se conserva en el navegador y se renueva automáticamente. Cerrar sesión en cualquiera de los apartados bloquea ambos en ese navegador.
 
-La sesión del panel usa `plan-police-auth`, distinta de la sesión de la guía. Se conserva en el navegador; los registros pertenecen a la cuenta en Supabase. Cerrar esta sesión no cierra la de la guía. Sin registro público desde el panel. La función valida la contraseña mediante Supabase Auth antes de devolver tokens. RLS exige usuario propio y pertenencia al panel para cada operación.
+La antigua sesión `plan-police-auth` se elimina al abrir la versión nueva. La función `police-login` se ha retirado y devuelve HTTP 410; no recibe ni valida credenciales. Las tablas mantienen RLS de propietario y pertenencia; no se han cambiado contraseñas ni registros existentes. El contenido estático de una PWA alojada en Pages es descargable; los registros privados están protegidos por Supabase, además de la barrera de interfaz.
 
 ## Guardado y cronómetro
 
@@ -28,7 +28,7 @@ Planificar o marcar hecho no genera estudio. Resultados: misma categoría y esca
 
 ## Verificación y límites
 
-Pruebas unitarias en `src/police/model.test.ts`, junto a las pruebas existentes. Pruebas de integración con cuentas sintéticas para RLS, autenticación, concurrencia y reintentos; pruebas de navegador Chromium y WebKit. WebKit de escritorio no sustituye un iPhone físico. El acceso personal de Lolo solo se puede verificar después de recibir su correo y aprovisionar la cuenta.
+Pruebas unitarias en `src/police/model.test.ts`, junto a las pruebas existentes. Pruebas de integración con cuentas sintéticas para RLS, autenticación, concurrencia y reintentos; pruebas de navegador Chromium y WebKit. WebKit de escritorio no sustituye un iPhone físico. La autorización de la cuenta real se verifica en la base de datos; las pruebas de contraseña se realizan con cuentas sintéticas, sin pedir ni cambiar la contraseña personal.
 
 El proyecto conserva el plan gratuito actual; no se han contratado servicios de pago. Su disponibilidad y cuotas dependen del proveedor. Sin cambios a la tabla `plan_data` existente ni a las cuentas personales previas.
 

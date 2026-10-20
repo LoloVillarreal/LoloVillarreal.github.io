@@ -1,7 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
-import config from '../data/cloud-config.json'
+import { supabase as policeClient } from '../lib/account'
 import { type Item, validateItem } from './model'
-export const policeClient=createClient(config.url,config.publishableKey,{auth:{storageKey:'plan-police-auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:false},global:{fetch:async(input,init)=>{const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);try{return await fetch(input,{...init,signal:controller.signal})}finally{clearTimeout(timeout)}}}})
+export { supabase as policeClient } from '../lib/account'
 export async function readPanel(){
   const {data:{session},error}=await policeClient.auth.getSession();if(error||!session)throw Error('Inicia sesión para recuperar tu panel.')
   const user=session.user
