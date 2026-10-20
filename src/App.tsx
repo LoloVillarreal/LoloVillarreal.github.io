@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Check, Dumbbell, Home, Moon, RefreshCw, Salad, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
@@ -10,9 +10,13 @@ import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
 
+const PolicePanel=lazy(()=>import('./police/PolicePanel'))
+
 function App(){return <StorageProvider><AccountProvider><Workspace/></AccountProvider></StorageProvider>}
 
 function Workspace(){
+  const [police,setPolice]=useState(location.hash==='#police')
+  useEffect(()=>{const change=()=>setPolice(location.hash==='#police');window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
   const [navigation,setNavigation]=useStored('navigation',()=>({day:isoDate(),section:'home' as NavSection,trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
@@ -67,6 +71,7 @@ function Workspace(){
   const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
+  if(police)return <Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel/></Suspense>
   const section=navigation.section
   return <div className="app-shell">
     {!online&&<div className="offline-banner"><WifiOff size={16}/> Guía sin conexión · necesitas internet para sincronizar tus datos</div>}

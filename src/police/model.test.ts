@@ -1,0 +1,20 @@
+import { describe,it,expect } from 'vitest'
+import { defaultPrefs,studyByDay,stats,coffeeStats,localToISO,timerSegments,segmentSeconds,comparableKey,goalProgress,exportCsv,validateItem,type Item,type Timer } from './model'
+const item=(kind:Item['kind'],payload:Item['payload'],day='2026-10-21'):Item=>({id:crypto.randomUUID(),kind,day,payload,version:1})
+const study=(start:string,end:string)=>item('study',{label:'',note:'',segments:[{start,end,kind:'study'}]})
+const now=Date.parse('2026-10-21T12:00:00Z')
+describe('Panel personal: estadísticas verificables',()=>{
+ it('reparte el estudio al cruzar medianoche en Madrid',()=>{expect(studyByDay([study('2026-10-20T21:30:00Z','2026-10-20T22:30:00Z')],'Europe/Madrid',now)).toEqual({'2026-10-20':1800,'2026-10-21':1800})})
+ it('cuenta horas reales durante el cambio de horario',()=>{expect(studyByDay([study('2026-10-25T00:00:00Z','2026-10-25T03:00:00Z')],'Europe/Madrid',Date.parse('2026-10-26'))['2026-10-25']).toBe(10800)})
+ it('no duplica solapamientos ni suma descansos o tiempo futuro',()=>{const a=study('2026-10-21T10:00:00Z','2026-10-21T11:00:00Z');a.payload.segments.push({start:'2026-10-21T11:00:00Z',end:'2026-10-21T12:00:00Z',kind:'break'});expect(studyByDay([a,study('2026-10-21T10:30:00Z','2026-10-21T13:00:00Z')],'Europe/Madrid',now)['2026-10-21']).toBe(7200)})
+ it('separa semanas de lunes a domingo y excluye descansos previstos',()=>{const rows=[study('2026-10-18T10:00:00Z','2026-10-18T11:00:00Z'),study('2026-10-19T10:00:00Z','2026-10-19T12:00:00Z'),item('plan',{category:'Descanso'},'2026-10-20')];const s=stats(rows,defaultPrefs,now);expect(s.week).toBe(7200);expect(s.previousWeek).toBe(3600);expect(s.expectedDays).toBe(2);expect(s.restDays).toBe(1);expect(s.elapsed).toBe(4)})
+ it('una tarea hecha no crea horas de estudio',()=>expect(stats([item('plan',{state:'done',minutes:120})],defaultPrefs,now).total).toBe(0))
+ it('media por días naturales sin error por horario de verano',()=>expect(stats([study('2026-03-28T10:00:00Z','2026-03-28T11:00:00Z')],defaultPrefs,Date.parse('2026-03-30T12:00:00Z')).elapsed).toBe(3))
+ it('café sin precio no inventa gastos',()=>{const s=coffeeStats([item('coffee',{at:'2026-10-21T10:00:00Z',price:2}),item('coffee',{at:'2026-10-21T11:00:00Z'})],'Europe/Madrid',now);expect(s.total).toBe(2);expect(s.priced).toBe(1);expect(s.spent).toBe(2)})
+ it('no mezcla escalas, unidades ni dirección de mejora',()=>{expect(comparableKey(item('result',{category:'Test',scale:10}))).not.toBe(comparableKey(item('result',{category:'Test',scale:100})));expect(comparableKey(item('training',{activity:'Carrera',unit:'s',direction:'lower'}))).not.toBe(comparableKey(item('training',{activity:'Carrera',unit:'m',direction:'higher'})))})
+ it('los objetivos dependen de registros reales y su fecha inicial',()=>{const goal=item('goal',{metric:'studyHours',from:'2026-10-21',target:5});expect(goalProgress(goal,[study('2026-10-20T10:00:00Z','2026-10-20T11:00:00Z'),study('2026-10-21T10:00:00Z','2026-10-21T11:00:00Z')],defaultPrefs,now)).toBe(1)})
+ it('rechaza horas inexistentes y ambiguas de entrada manual',()=>{expect(()=>localToISO('2026-03-29T02:30','Europe/Madrid')).toThrow();expect(()=>localToISO('2026-10-25T02:30','Europe/Madrid')).toThrow();expect(localToISO('2026-10-21T10:00','Europe/Madrid')).toBe('2026-10-21T08:00:00.000Z')})
+ it('Pomodoro no añade horas al regresar tarde',()=>{const timer={segments:[],phase:'study',phase_started_at:'2026-10-21T08:00:00Z',remaining_seconds:1500} as unknown as Timer;expect(segmentSeconds(timerSegments(timer,now),'study',now)).toBe(1500)})
+ it('pausa no incrementa el cronómetro',()=>{const timer={segments:[{start:'2026-10-21T08:00:00Z',end:'2026-10-21T08:10:00Z',kind:'study'}],phase:'paused'} as Timer;expect(segmentSeconds(timerSegments(timer,now),'study',now)).toBe(600)})
+ it('exportación CSV neutraliza fórmulas y validación rechaza sesiones futuras',()=>{expect(exportCsv([item('priority',{title:'=SUM(A1)',done:false})])).toContain("'=SUM(A1)");expect(validateItem(study('2026-10-22T10:00:00Z','2026-10-22T11:00:00Z'),now)).toBe(false)})
+})
