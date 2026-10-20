@@ -32,6 +32,25 @@ describe('persistencia IndexedDB',()=>{
     const bad={...await loadBackup(),progressLogs:[{id:'bad'}]} as never
     expect(validateBackup(bad)).toBe(false);await expect(importBackup(bad)).rejects.toThrow();expect((await getAll<ProgressLog>('progressLogs'))[0].id).toBe('safe')
   })
+  it('conserva asistencia y registros parciales al exportar y restaurar',async()=>{
+    const attendance={date:'2026-10-19',title:'Glúteos',type:'strength',completedAt:'2026-10-19T18:00:00.000Z'}
+    await setKV('attendance:2026-10-19',attendance)
+    await put('progressLogs',{id:'weight-only',date:'2026-10-19',weight:54.5,notes:''})
+    const backup=JSON.parse(JSON.stringify(await loadBackup()))
+    expect(validateBackup(backup)).toBe(true)
+    await clearAll();await importBackup(backup)
+    expect(await getKV('attendance:2026-10-19',null)).toEqual(attendance)
+    expect((await getAll<ProgressLog>('progressLogs'))[0]).toEqual({id:'weight-only',date:'2026-10-19',weight:54.5,notes:''})
+    backup.localState['attendance:2026-10-19'].date='2026-10-20'
+    expect(validateBackup(backup)).toBe(false)
+  })
+  it('permite recuperar un borrador incompleto sin tratarlo como una medición',async()=>{
+    await setKV('progressDraft',{id:'draft',date:'2026-10-20',weight:'54,',waist:'',hip:'',hipThrustKg:'',hipThrustReps:'',energy:'',sleep:'',notes:'',photo:''})
+    const backup=await loadBackup();expect(validateBackup(backup)).toBe(true)
+    await clearAll();await importBackup(backup)
+    expect(await getAll('progressLogs')).toHaveLength(0)
+    expect((await getKV('progressDraft',{weight:''})).weight).toBe('54,')
+  })
   it('revierte toda la restauración si falla una escritura',async()=>{
     await put('progressLogs',{id:'safe',date:'2026-10-01',energy:3,sleep:8,notes:''})
     const backup=await loadBackup();backup.progressLogs[0].id='new'

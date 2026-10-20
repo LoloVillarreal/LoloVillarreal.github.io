@@ -1,0 +1,66 @@
+.attendance-summary, .progress-capture, .progress-entry, .progress-overview, .progress-history, .progress-goal { grid-column: 1 / -1; }
+.attendance-summary .eyebrow, .progress-overview .eyebrow { display: flex; align-items: center; gap: 7px; }
+.attendance-summary .section-head { gap: 14px; flex-wrap: wrap; }
+.attendance-summary .text-button, .draft-resume { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-size: 12px; }
+.attendance-metrics, .progress-key-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 24px; }
+.attendance-metrics .metric, .progress-key-metrics .metric { min-width: 0; padding: 18px 14px; background: var(--surface2); box-shadow: none; }
+.attendance-metrics .metric p, .progress-key-metrics .metric p { margin-top: 0; font-size: 11px; }
+.attendance-metrics .metric strong { font-size: 42px; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.attendance-metrics .metric small, .progress-key-metrics .metric small { display: block; line-height: 1.5; font-size: 10px; }
+.progress-key-metrics .metric strong { display: block; font-size: 28px; line-height: 1.3; margin: 8px 0; }
+.frequency-heading { margin-top: 30px; flex-wrap: wrap; gap: 10px; }
+.frequency-heading h3 { font-size: 16px; }
+.frequency-chart { list-style: none; padding: 0; margin: 18px 0 25px; display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 10px; }
+.frequency-chart li { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+.frequency-chart strong { font-size: 12px; }
+.frequency-chart small { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.frequency-track { width: min(32px,100%); height: 96px; background: var(--surface2); border-radius: 9px; display: flex; align-items: flex-end; overflow: hidden; }
+.frequency-track span { width: 100%; background: var(--olive); border-radius: 9px; }
+.frequency-chart li:last-child .frequency-track span { background: var(--coral); }
+.capture-options { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-top: 20px; }
+.capture-options button { display: flex; justify-content: space-between; align-items: center; min-height: 60px; gap: 8px; padding: 16px; text-align: left; }
+.capture-options svg { flex-shrink: 0; }
+.draft-resume { margin-top: 18px; text-align: left; }
+.progress-entry { scroll-margin-top: 18px; }
+.progress-entry > .section-head { align-items: flex-start; gap: 12px; }
+.progress-entry .progress-inputs > label, .progress-entry .progress-inputs > .full { margin-top: 22px; }
+.capture-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.capture-tabs button { padding: 10px 14px; min-height: 44px; border: 1px solid var(--line); border-radius: 30px; background: var(--surface); font-size: 12px; }
+.capture-tabs button[aria-pressed=true] { background: var(--olive); color: var(--on-accent,#fff); }
+.progress-entry fieldset { min-width: 0; border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin: 22px 0; }
+.progress-entry fieldset.progress-inputs { border: 0; padding: 0; margin: 0; }
+.progress-entry legend { padding: 0 8px; font-size: 13px; font-weight: 700; }
+.progress-entry fieldset .form-grid { margin-top: 0; }
+.progress-entry input { min-height: 52px; font-size: 16px; }
+.progress-entry .warning { margin: 18px 0; }
+.energy-scale { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; margin: 18px 0 10px; }
+.energy-scale button { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 7px; min-height: 78px; padding: 12px 5px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.energy-scale button b { font-size: 20px; }
+.energy-scale button span { font-size: 10px; line-height: 1.3; }
+.energy-scale button[aria-pressed=true] { background: var(--olive); color: var(--on-accent,#fff); border-color: var(--olive); }
+.strength-gain { font-size: 16px !important; font-weight: 600; margin: 20px 0 !important; color: var(--olive) !important; }
+.progress-history .history-entry { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.progress-history .history-entry > div:first-child { min-width: 0; }
+.progress-history .history-entry .button-row { flex-shrink: 0; margin-top: 0; }
+.progress-history .history-entry p { line-height: 1.6; }
+.workspace--home > .attendance-summary { grid-row: 2; }
+@media (min-width:700px) {
+  .workspace--home:has(.attendance-summary) > .home-today, .workspace--home:has(.attendance-summary) > .guide-links { grid-row: 3; }
+  .workspace--home:has(.attendance-summary):has(.resume-card) > .resume-card { grid-row: 3; }
+  .workspace--home:has(.attendance-summary):has(.resume-card) > .home-today, .workspace--home:has(.attendance-summary):has(.resume-card) > .guide-links { grid-row: 4; }
+}
+@media (max-width:600px) {
+  .capture-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .progress-key-metrics { grid-template-columns: 1fr; }
+  .progress-key-metrics .metric { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: center; }
+  .progress-key-metrics .metric p { margin: 0; }
+  .progress-key-metrics .metric strong { grid-column: 2; grid-row: 1 / 3; font-size: 25px; }
+  .progress-history .history-entry { flex-direction: column; gap: 8px; }
+  .attendance-metrics { gap: 7px; }
+  .attendance-metrics .metric { padding: 14px 9px; }
+  .attendance-metrics .metric strong { font-size: 34px; }
+  .attendance-metrics .metric p { min-height: 30px; line-height: 1.4; }
+  .frequency-chart { gap: 6px; }
+  .progress-entry fieldset { padding: 15px 12px; }
+  .energy-scale { gap: 4px; }
+}

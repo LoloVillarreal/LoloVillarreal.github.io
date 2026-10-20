@@ -103,7 +103,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     try{
     const entries:Array<{key:string;value:{data:unknown}}>=data.progressLogs.map(({photo:_photo,...log})=>({key:`progress:${log.id}`,value:{data:log}}))
     for(const key of ['calculator','personalGoal','goalDraft','progressDraft'])if(data.localState?.[key]!==undefined)entries.push({key,value:{data:key==='progressDraft'?{...data.localState[key] as object,photo:''}:data.localState[key]}})
-    for(const [key,value] of Object.entries(data.localState??{}))if(key.startsWith('training:'))entries.push({key,value:{data:value}})
+    for(const [key,value] of Object.entries(data.localState??{}))if(key.startsWith('training:')||key.startsWith('attendance:'))entries.push({key,value:{data:value}})
     const result=await supabase.rpc('replace_plan_data',{entries})
     if(result.error)throw result.error
     await load()

@@ -5,6 +5,8 @@ import './index.css'
 import './design.css'
 import './polish.css'
 import './glass.css'
+import './progress.css'
+import './training-calendar.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,

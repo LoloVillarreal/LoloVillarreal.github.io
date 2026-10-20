@@ -77,7 +77,7 @@ function Workspace(){
       {section==='home'&&<HomeScreen go={go} reader={reader} startTraining={startTraining}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} setReader={setReader} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<NutritionScreen/>}
-      {section==='progress'&&<ProgressScreen hide={settings.hideSensitive} notify={notify}/>}
+      {section==='progress'&&<ProgressScreen hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>setNavigation(v=>({...v,tab}))} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     {toast&&<div className="toast" role="status">{toast}</div>}

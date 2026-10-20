@@ -2,6 +2,7 @@ import { openDB } from 'idb'
 import type { AppSettings, Backup, CardioLog, ProgressLog, WorkoutLog } from '../types'
 import { validDate } from './dates'
 import { trainingEntryValid } from './training-plan'
+import { attendanceEntryValid } from './attendance'
 
 const DB_NAME='glute-core-db'
 const DB_VERSION=1
@@ -36,7 +37,7 @@ const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&
 const number=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0
 const optionalNumber=(v:unknown)=>v===undefined||number(v)
 const text=(v:unknown)=>typeof v==='string'
-const numberText=(v:unknown)=>text(v)&&(v===''||Number.isFinite(Number(v)))
+const numberText=(v:unknown)=>typeof v==='string'&&(v===''||Number.isFinite(Number(v.replace(',','.'))))
 const strings=(v:Record<string,unknown>,keys:string[])=>keys.every(k=>text(v[k]))
 const boolMap=(v:unknown)=>object(v)&&Object.values(v).every(x=>typeof x==='boolean')
 const portionMap=(v:unknown)=>object(v)&&Object.values(v).every(x=>number(x)&&Number(x)>0&&Number(x)<=10)
@@ -45,10 +46,11 @@ const baseLog=(v:unknown):v is Record<string,unknown>=>object(v)&&text(v.id)&&!!
 const workoutValid=(v:unknown)=>baseLog(v)&&strings(v,['workoutTitle','exerciseId','exerciseName','notes'])&&number(v.workoutDay)&&Number(v.workoutDay)<=6&&typeof v.completed==='boolean'&&Array.isArray(v.sets)&&v.sets.every(s=>object(s)&&number(s.set)&&['warmup','working'].includes(String(s.kind))&&typeof s.done==='boolean'&&['weight','reps','seconds','rir'].every(k=>optionalNumber(s[k])))&&optionalNumber(v.fatigue)&&(v.discomfort===undefined||text(v.discomfort))
 const modalities=['Caminata','Bicicleta','Elíptica','Carrera','Otro']
 const cardioValid=(v:unknown)=>baseLog(v)&&modalities.includes(String(v.modality))&&number(v.duration)&&optionalNumber(v.distance)&&number(v.rpe)&&text(v.notes)
-const progressValid=(v:unknown)=>baseLog(v)&&['weight','waist','hip','hipThrustKg','hipThrustReps'].every(k=>optionalNumber(v[k]))&&number(v.energy)&&number(v.sleep)&&text(v.notes)&&(v.photo===undefined||text(v.photo))
+const progressValid=(v:unknown)=>baseLog(v)&&['weight','waist','hip','hipThrustKg','hipThrustReps','energy','sleep'].every(k=>optionalNumber(v[k]))&&text(v.notes)&&(v.photo===undefined||text(v.photo))
 
 function localValueValid(key:string,v:unknown):boolean{
   if(key.startsWith('training:'))return trainingEntryValid(key,v)
+  if(key.startsWith('attendance:'))return attendanceEntryValid(key,v)
   if(key==='settings')return settingsValid(v)
   if(key==='mealChecks'||key==='shoppingChecks'||key==='finishedSessions')return boolMap(v)
   if(key==='mealPortions'||key==='consumedPortions')return portionMap(v)
@@ -60,7 +62,7 @@ function localValueValid(key:string,v:unknown):boolean{
   if(key==='navigation')return object(v)&&validDate(v.day)&&validDate(v.trainingDate)&&validDate(v.nutritionDate)&&['home','training','nutrition','progress','more'].includes(String(v.section))&&['calc','tips','settings'].includes(String(v.tab))
   if(key==='timer')return object(v)&&(v.endsAt===null||number(v.endsAt))&&number(v.remaining)
   if(key==='calculator')return object(v)&&['age','height','weight','calories','protein','fat'].every(k=>numberText(v[k]))&&number(v.activity)&&['female','male'].includes(String(v.sex))
-  if(key==='progressDraft')return object(v)&&text(v.id)&&(v.date===''||validDate(v.date))&&['weight','waist','hip','sleep'].every(k=>numberText(v[k]))&&['hipThrustKg','hipThrustReps'].every(k=>v[k]===undefined||numberText(v[k]))&&number(v.energy)&&strings(v,['notes','photo'])
+  if(key==='progressDraft')return object(v)&&text(v.id)&&(v.date===''||validDate(v.date))&&strings(v,['weight','waist','hip','sleep'])&&['hipThrustKg','hipThrustReps'].every(k=>v[k]===undefined||text(v[k]))&&(v.energy===''||number(v.energy))&&strings(v,['notes','photo'])
   if(key.startsWith('exercise:'))return workoutValid(v)
   if(key.startsWith('cardio:'))return baseLog(v)&&modalities.includes(String(v.modality))&&numberText(v.duration)&&numberText(v.distance)&&number(v.rpe)&&text(v.notes)
   return false

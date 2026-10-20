@@ -68,8 +68,8 @@ export type ProgressLog = {
   weight?: number
   waist?: number
   hip?: number
-  energy: number
-  sleep: number
+  energy?: number
+  sleep?: number
   notes: string
   photo?: string
   hipThrustKg?: number
@@ -115,5 +115,5 @@ export type Backup = {
   localState?: Record<string, unknown>
 }
 
-export type ProgressDraft = { id:string; date:string; weight:string; waist:string; hip:string; hipThrustKg:string; hipThrustReps:string; energy:number; sleep:string; notes:string; photo:string }
+export type ProgressDraft = { id:string; date:string; weight:string; waist:string; hip:string; hipThrustKg:string; hipThrustReps:string; energy:number|''; sleep:string; notes:string; photo:string }
 export type CalculatorProfile = { age:string; height:string; weight:string; activity:number; sex:'female'|'male'; calories:string; protein:string; fat:string }

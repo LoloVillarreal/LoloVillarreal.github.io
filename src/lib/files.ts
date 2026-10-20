@@ -7,7 +7,7 @@ export function download(content:string,name:string,type='application/json'){
 
 const csvCell=(v:unknown)=>`"${String(v??'').replace(/"/g,'""')}"`
 export function progressCsv(logs:ProgressLog[]){
-  const rows=[['Fecha','Peso kg','Cintura cm','Cadera cm','Hip thrust kg','Hip thrust repeticiones','Energía 1-5','Sueño h','Notas'],...logs.map(x=>[x.date,x.weight,x.waist,x.hip,x.hipThrustKg,x.hipThrustReps,x.energy,x.sleep,x.notes])]
+  const rows=[['Fecha','Peso kg','Cintura cm','Cadera cm','Hip thrust kg','Hip thrust repeticiones','Energía percibida del día 1-5','Horas dormidas la noche anterior','Notas'],...logs.map(x=>[x.date,x.weight,x.waist,x.hip,x.hipThrustKg,x.hipThrustReps,x.energy,x.sleep,x.notes])]
   return '\ufeff'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n')
 }
 export function workoutsCsv(logs:WorkoutLog[]){
