@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { Check, Dumbbell, Home, Moon, RefreshCw, Salad, Settings, Sun, TrendingUp, WifiOff } from 'lucide-react'
+import { Check, Dumbbell, Home, Moon, RefreshCw, Salad, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
 import { StorageProvider, useStorage, useStored } from './lib/storage'
 import { AccountProvider, useAccount } from './lib/account'
 import { isoDate } from './lib/dates'
 import { backupJson, download } from './lib/files'
+import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
 
@@ -24,6 +25,8 @@ function Workspace(){
   const [loadError,setLoadError]=useState(false)
   const [online,setOnline]=useState(navigator.onLine)
   const [toast,notify]=useState('')
+  const [trainingDirty,setTrainingDirty]=useState(false)
+  const [reader,setReader]=useState<{date:string;index:number}|null>(null)
   const [registration,setRegistration]=useState<ServiceWorkerRegistration>()
   const {needRefresh:[needRefresh],updateServiceWorker}=useRegisterSW({onRegisteredSW(_url,registration){
     setRegistration(registration)
@@ -41,28 +44,38 @@ function Workspace(){
     setWorkoutLogs(w);setCardioLogs(c);setProgressLogs(p);setReady(true);setLoadError(false)
   }
   useEffect(()=>{void reload().catch(()=>setLoadError(true))},[])
-  useEffect(()=>{document.documentElement.classList.toggle('dark',settings.darkMode)},[settings.darkMode])
+  const theme=currentTheme(settings)
+  useEffect(()=>{
+    document.documentElement.classList.toggle('dark',theme==='dark');document.documentElement.classList.toggle('glass',theme==='glass')
+    document.documentElement.dataset.theme=theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='glass'?'#ffffff':theme==='dark'?'#18221e':'#f8f6f1')
+  },[theme])
+  useEffect(()=>setReader(null),[account.session?.user.id])
   useEffect(()=>{window.scrollTo(0,0)},[navigation.section])
   useEffect(()=>{
-    const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day)setNavigation(v=>({...v,day,section:'home',trainingDate:day,nutritionDate:day}))}
+    const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day&&!trainingDirty)setNavigation(v=>({...v,day,section:'home',trainingDate:day,nutritionDate:day}))}
     const dayTick=window.setInterval(sync,30000)
     window.addEventListener('online',sync);window.addEventListener('offline',sync);window.addEventListener('focus',sync);document.addEventListener('visibilitychange',sync)
     sync()
     return()=>{clearInterval(dayTick);window.removeEventListener('online',sync);window.removeEventListener('offline',sync);window.removeEventListener('focus',sync);document.removeEventListener('visibilitychange',sync)}
-  },[navigation.day])
+  },[navigation.day,trainingDirty])
   useEffect(()=>{if(toast){const id=setTimeout(()=>notify(''),4500);return()=>clearTimeout(id)}},[toast])
-  const go=(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>setNavigation(v=>({...v,section,...(date?{trainingDate:date}:{}),...(tab?{tab}:{})}))
+  const go=(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>{
+    if(trainingDirty&&(section!==navigation.section||(date&&date!==navigation.trainingDate)||(tab&&tab!==navigation.tab))&&!confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?'))return false
+    setNavigation(v=>({...v,section,...(date?{trainingDate:date}:{}),...(tab?{tab}:{})}));return true
+  }
+  const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
   const section=navigation.section
   return <div className="app-shell">
     {!online&&<div className="offline-banner"><WifiOff size={16}/> Guía sin conexión · necesitas internet para sincronizar tus datos</div>}
-    {needRefresh&&<div className="update-banner"><RefreshCw size={18}/><span>Nueva versión disponible</span><button disabled={storage.saving||account.saving||!!storage.error||!!account.error} onClick={async()=>{try{await storage.flush();await account.flush();await updateServiceWorker(true)}catch{notify('Guarda los cambios antes de actualizar.')}}}>Actualizar</button></div>}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><button className="icon-button" aria-label="Cambiar tema" onClick={()=>saveSettings(v=>({...v,darkMode:!v.darkMode}))}>{settings.darkMode?<Sun/>:<Moon/>}</button></header>
+    {needRefresh&&<div className="update-banner"><RefreshCw size={18}/><span>Nueva versión disponible</span><button disabled={trainingDirty||storage.saving||account.saving||!!storage.error||!!account.error} onClick={async()=>{try{await storage.flush();await account.flush();await updateServiceWorker(true)}catch{notify('Guarda los cambios antes de actualizar.')}}}>Actualizar</button></div>}
+    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button></header>
     <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':'Tu guía disponible sin conexión'}</>}</div>
     <main className={`workspace workspace--${section}`}>
-      {section==='home'&&<HomeScreen go={go}/>}
-      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify}/>}
+      {section==='home'&&<HomeScreen go={go} reader={reader} startTraining={startTraining}/>}
+      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} setReader={setReader} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<NutritionScreen/>}
       {section==='progress'&&<ProgressScreen hide={settings.hideSensitive} notify={notify}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>setNavigation(v=>({...v,tab}))} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}

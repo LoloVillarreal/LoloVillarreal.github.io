@@ -1,0 +1,68 @@
+/* Optional white Liquid Glass theme; clear and dark keep their own palettes. */
+html.glass {
+  color-scheme: light;
+  --bg: #f8faff;
+  --surface: #ffffffc9;
+  --surface2: #edf2ffb8;
+  --text: #202a42;
+  --muted: #59657c;
+  --line: #cbd5ea9c;
+  --olive: #3658ce;
+  --sage: #829bea;
+  --coral: #b85186;
+  --on-accent: #ffffff;
+  --peach: #f0efffc4;
+  --dock: #f8fbff;
+  --shadow: 0 14px 45px #54699512;
+}
+.glass body {
+  background: radial-gradient(ellipse at 6% 8%, #b8e4ff90, transparent 38%), radial-gradient(ellipse at 95% 25%, #e4bfff80, transparent 40%), radial-gradient(ellipse at 40% 90%, #ffdfbc75, transparent 43%), #f8faff;
+  background-attachment: fixed;
+}
+.glass .card, .glass .hero-card, .glass .welcome-card, .glass .date-picker, .glass .guide-links button, .glass .segmented, .glass .food-tabs {
+  background: #ffffffb8;
+  border: 1px solid #fffffff0;
+  box-shadow: inset 0 1px 0 #ffffff, 0 12px 40px #5976aa12, 0 0 0 1px #b7c7e827;
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  backdrop-filter: blur(22px) saturate(135%);
+}
+.glass .welcome-card { background: linear-gradient(115deg,#ffffffb8,#edf6ffb3 40%,#f5eaff8c); }
+.glass .welcome-card::before { border-color: #ffffffc7; }
+.glass .welcome-card::after { border-color: #ffffffc7; }
+.glass .welcome-tag { background: linear-gradient(100deg,#dceeffbd,#eadfffbd,#ffe7edbd); border: 1px solid #ffffff; }
+.glass .welcome-card h2 { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-weight: 600; letter-spacing: -.065em; }
+.glass .home-today, .glass .session-intro { background: linear-gradient(130deg,#ffffffdb,#eef4ffb3 60%,#f4ecffb3); }
+.glass .primary { background: linear-gradient(120deg,#325de1,#5b5edc); color: #fff; border: 1px solid #ffffff61; box-shadow: inset 0 1px 0 #ffffff40, 0 6px 18px #425ed52b; }
+.glass .primary:hover { box-shadow: 0 9px 25px #425ed534; }
+.glass .secondary, .glass .icon-button, .glass input, .glass select, .glass textarea { background: #ffffffc9; border-color: #d0daf0; box-shadow: inset 0 1px 0 #ffffff; }
+.glass .icon-button { color: #3e59b8; }
+.glass .bottom-nav {
+  background: #ffffffe0;
+  border: 1px solid #ffffff;
+  box-shadow: inset 0 1px 1px #fff, 0 14px 45px #475f9630, 0 0 0 1px #a6b9de26;
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(30px) saturate(160%);
+}
+.glass .bottom-nav button { color: #505e78; }
+.glass .bottom-nav button.active { background: linear-gradient(140deg,#d9f0ff,#e9ddff 60%,#ffe4ed); color: #293d77; box-shadow: inset 0 1px 0 #ffffff, 0 2px 9px #718bc719; }
+.glass .bottom-nav button:not(.active):hover { background: #e8efffbf; color: #263c72; }
+.glass .bottom-nav button:focus-visible { outline-color: #5268c9; }
+.glass .metric, .glass .prescription > div, .glass .alternative-box, .glass .goal-callout, .glass .routine-option, .glass .planned-exercise { background: #f1f5ff9e; border: 1px solid #ffffffcf; box-shadow: inset 0 1px 0 #ffffff; }
+.glass .planned-exercise { background: #ffffffab; border-color: #d5def0a3; }
+.glass .privacy-note, .glass .food-copy .alternative-box { background: #edf2ff9c; }
+.glass .day-scroller button.active { background: linear-gradient(140deg,#456ce0,#7361d7); color: white; }
+.glass .day-scroller button.active b { color: white; }
+.glass .guide-links button > svg:first-child { background: linear-gradient(140deg,#dfefff,#ede4ff); color: #4d61ac; }
+.glass .guide-links button:nth-child(2) > svg:first-child { background: linear-gradient(140deg,#ffe4ef,#efe2ff); color: #a94d81; }
+.glass .guide-links button:nth-child(3) > svg:first-child { background: linear-gradient(140deg,#d8f4ee,#e0ecff); color: #34746e; }
+.glass .planner-commandbar { background: #fffffff0; border-color: #fff; -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.glass .library-dialog, .glass .library-dialog > footer { background: #f9fbfffa; border-color: #ffffff; }
+.glass .library-dialog::backdrop { background: #60759a42; }
+.glass .library-exercise { background: #ffffffb3; }
+.glass .session-position > span { background: linear-gradient(90deg,#3f81dd,#8774dd,#d27ba8); }
+.glass .theme-option[aria-pressed='true'] { outline-color: #5264c9; }
+.glass .toast, .glass .offline-banner, .glass .update-banner { background: #243964ed; color: #fff; }
+@media (prefers-reduced-transparency: reduce) {
+  .glass .card, .glass .hero-card, .glass .welcome-card, .glass .date-picker, .glass .guide-links button, .glass .bottom-nav, .glass .planner-commandbar { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass .library-dialog::backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

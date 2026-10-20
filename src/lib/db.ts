@@ -40,7 +40,7 @@ const numberText=(v:unknown)=>text(v)&&(v===''||Number.isFinite(Number(v)))
 const strings=(v:Record<string,unknown>,keys:string[])=>keys.every(k=>text(v[k]))
 const boolMap=(v:unknown)=>object(v)&&Object.values(v).every(x=>typeof x==='boolean')
 const portionMap=(v:unknown)=>object(v)&&Object.values(v).every(x=>number(x)&&Number(x)>0&&Number(x)<=10)
-const settingsValid=(v:unknown)=>object(v)&&typeof v.darkMode==='boolean'&&typeof v.hideSensitive==='boolean'&&validDate(v.startDate)&&['calorieTarget','proteinTarget','fatTarget','carbTarget'].every(k=>number(v[k]))
+const settingsValid=(v:unknown)=>object(v)&&typeof v.darkMode==='boolean'&&(v.theme===undefined||['light','dark','glass'].includes(String(v.theme)))&&typeof v.hideSensitive==='boolean'&&validDate(v.startDate)&&['calorieTarget','proteinTarget','fatTarget','carbTarget'].every(k=>number(v[k]))
 const baseLog=(v:unknown):v is Record<string,unknown>=>object(v)&&text(v.id)&&!!v.id&&validDate(v.date)
 const workoutValid=(v:unknown)=>baseLog(v)&&strings(v,['workoutTitle','exerciseId','exerciseName','notes'])&&number(v.workoutDay)&&Number(v.workoutDay)<=6&&typeof v.completed==='boolean'&&Array.isArray(v.sets)&&v.sets.every(s=>object(s)&&number(s.set)&&['warmup','working'].includes(String(s.kind))&&typeof s.done==='boolean'&&['weight','reps','seconds','rir'].every(k=>optionalNumber(s[k])))&&optionalNumber(v.fatigue)&&(v.discomfort===undefined||text(v.discomfort))
 const modalities=['Caminata','Bicicleta','Elíptica','Carrera','Otro']

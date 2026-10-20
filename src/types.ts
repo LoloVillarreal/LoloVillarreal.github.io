@@ -95,6 +95,7 @@ export type MenuDay = { day: number; name: string; meals: Meal[] }
 
 export type AppSettings = {
   darkMode: boolean
+  theme?: 'light' | 'dark' | 'glass'
   hideSensitive: boolean
   startDate: string
   calorieTarget: number
