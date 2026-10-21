@@ -38,3 +38,24 @@ describe('selección de entrenamiento por fecha',()=>{
     expect(validateBackup({...backup,localState:{'training:2026-10-21':plan}})).toBe(false)
   })
 })
+
+describe('biblioteca ampliada y persistencia del orden',()=>{
+  it('acepta ejercicios del catálogo y conserva sus IDs al resolver una rutina',()=>{
+    const added=exerciseLibrary.find(item=>item.id.startsWith('hevy-'))!
+    const plan=planFromRoutine(workoutDays[0]);plan.exercises.unshift({exerciseId:added.id,sets:2,reps:[8,12],rest:90})
+    expect(exerciseLibrary.length).toBeGreaterThan(380)
+    expect(trainingEntryValid('training:2026-10-19',plan)).toBe(true)
+    const restored=JSON.parse(JSON.stringify(plan))
+    expect(workoutForDate('2026-10-19',restored).exercises[0].hevyId).toBe(added.hevyId)
+    expect(workoutForDate('2026-10-19',restored).exercises.map(item=>item.id)).toEqual(plan.exercises.map(item=>item.exerciseId))
+  })
+  it('conserva parámetros por ejercicio al cambiar el orden y no permite duplicar un ID Hevy',()=>{
+    const plan=planFromRoutine(workoutDays[0]);plan.exercises[0].sets=5;const first=plan.exercises.shift()!;plan.exercises.push(first)
+    expect(workoutForDate('2026-10-19',plan).exercises[plan.exercises.length-1].sets).toBe(5)
+    expect(trainingPlanValid({...plan,exercises:[...plan.exercises,first]})).toBe(false)
+  })
+  it('representa tiempo y distancia con unidades diferenciadas',()=>{
+    expect(exerciseLibrary.some(item=>item.id.startsWith('hevy-')&&item.unit==='seconds')).toBe(true)
+    expect(exerciseLibrary.some(item=>item.unit==='meters')).toBe(true)
+  })
+})

@@ -8,7 +8,7 @@ export type Exercise = {
   muscle: string
   sets: number
   reps: [number, number]
-  unit?: 'reps' | 'seconds'
+  unit?: 'reps' | 'seconds' | 'meters'
   perSide?: boolean
   rest: [number, number]
   rir: [number, number]

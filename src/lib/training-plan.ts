@@ -1,12 +1,12 @@
+import { allExercises as exercises, exerciseLibrary } from './exercise-library'
+export { exerciseLibrary } from './exercise-library'
 import { workoutDays } from '../data/training'
 import { parseDate, validDate } from './dates'
 import type { Exercise, WorkoutDay } from '../types'
 
 export type PlannedExercise={exerciseId:string;sets:number;reps:[number,number];rest:number}
 export type TrainingPlan={title:string;type:WorkoutDay['type'];exercises:PlannedExercise[];notes:string;cardio:{activity:string;minutes:number}}
-const exercises=workoutDays.flatMap(day=>day.exercises)
-export const exerciseLibrary=exercises.filter((exercise,index)=>exercises.findIndex(item=>item.hevyId===exercise.hevyId)===index)
-export const cardioActivities=['Caminata','Bicicleta','Elíptica','Otro']
+export const cardioActivities=['Caminata','Bicicleta','Elíptica','Otro',...exerciseLibrary.filter(exercise=>exercise.muscle==='Cardio').map(exercise=>exercise.name)]
 export const plannedExercise=(exercise:Exercise):PlannedExercise=>({exerciseId:exercise.id,sets:exercise.sets,reps:[...exercise.reps],rest:exercise.rest[1]})
 export function planFromRoutine(day:WorkoutDay):TrainingPlan{
   return {title:day.title,type:day.type,exercises:day.exercises.map(plannedExercise),notes:'',cardio:{activity:'Caminata',minutes:35}}
