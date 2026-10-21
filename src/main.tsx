@@ -8,6 +8,8 @@ import './glass.css'
 import './progress.css'
 import './training-calendar.css'
 import './training-compact.css'
+import './exercise-details.css'
+import './tools.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,

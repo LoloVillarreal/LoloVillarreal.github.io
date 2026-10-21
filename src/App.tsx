@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { Check, Dumbbell, Home, Moon, RefreshCw, Salad, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
+import { Check, Dumbbell, Home, Moon, RefreshCw, Wrench, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
 import { StorageProvider, useStorage, useStored } from './lib/storage'
 import { AccountPanel, AccountProvider, useAccount } from './lib/account'
@@ -8,6 +8,7 @@ import { isoDate } from './lib/dates'
 import { backupJson, download } from './lib/files'
 import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
+import ToolsScreen from './ToolsScreen'
 import SectionSwitch from './SectionSwitch'
 import './access.css'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
@@ -80,17 +81,17 @@ function Workspace(){
   return <div className="app-shell">
     {!online&&<div className="offline-banner"><WifiOff size={16}/> Guía sin conexión · necesitas internet para sincronizar tus datos</div>}
     {needRefresh&&<div className="update-banner"><RefreshCw size={18}/><span>Nueva versión disponible</span><button disabled={trainingDirty||storage.saving||account.saving||!!storage.error||!!account.error} onClick={async()=>{try{await storage.flush();await account.flush();await updateServiceWorker(true)}catch{notify('Guarda los cambios antes de actualizar.')}}}>Actualizar</button></div>}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Nutrición',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
+    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':'Tu guía disponible sin conexión'}</>}</div>
     <main className={`workspace workspace--${section}`}>
       {section==='home'&&<HomeScreen go={go} reader={reader} startTraining={startTraining}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} setReader={setReader} onDirtyChange={setTrainingDirty}/>}
-      {section==='nutrition'&&<NutritionScreen/>}
+      {section==='nutrition'&&<ToolsScreen notify={notify}/>}
       {section==='progress'&&<ProgressScreen hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>setNavigation(v=>({...v,tab}))} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     {toast&&<div className="toast" role="status">{toast}</div>}
-    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Guía',Home],['training','Entrenos',Dumbbell],['nutrition','Nutrición',Salad],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
+    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Guía',Home],['training','Entrenos',Dumbbell],['nutrition','Herramientas',Wrench],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
   </div>
 }
 
