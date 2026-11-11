@@ -7,7 +7,7 @@
 | Cambiar de ejercicio en plena sesión | Toca **Ejercicios** en la parte superior y selecciona una ficha. Puedes saltar o volver atrás sin cambiar el orden de la rutina ni registrar asistencia. |
 | Ver cómo avanzar | Abre **Ver plan de 12 semanas** desde Inicio o desde el resumen de tu rutina. Toca una semana para leer el objetivo; solo cambia tu semana actual si pulsas **Seguir la semana**. |
 | Anotar una marca o una medida | En **Progreso**, elige **Hip thrust**, **Peso**, **Medidas** o **Bienestar**. Puedes cambiar de categoría sin perder lo escrito y guardar varios datos en un solo registro. |
-| Montar la barra | En **Herramientas → Barra y discos**, toca **Calcular peso objetivo**, escribe el total con barra y pulsa **Colocar** para ver el montaje. Para montarla a mano, toca **Cambiar** para elegir la barra y añade discos por pares. |
+| Montar la barra | En **Herramientas → Barra y discos**, escribe el total con barra en **Peso objetivo** y toca la flecha para ver el montaje. Para montarla a mano, toca **Cambiar** para elegir la barra y añade discos por pares. |
 | Resolver una duda en el gimnasio | **Herramientas → En el gimnasio** también reúne descansos, conversor y biblioteca. En la biblioteca, toca la fila para abrir la ficha; al volver, tu búsqueda sigue ahí. Los menús y consejos están en **Curiosidades y recursos**. |
 | Probar la app sin registrar nada real | Abre **Ajustes → Ayuda → Practicar con un ejemplo**. Ahí también están los pasos para instalarla en el iPhone. |
 
