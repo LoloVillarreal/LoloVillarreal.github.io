@@ -34,7 +34,7 @@ body { background: radial-gradient(ellipse at 90% 0%, var(--peach), transparent 
 #root { background: transparent; }
 .app-shell { max-width: 1040px; padding: calc(24px + env(safe-area-inset-top)) 20px calc(132px + env(safe-area-inset-bottom)); }
 .workspace { gap: 20px; }
-.workspace > * { min-width: 0; animation: surface-in 220ms ease-out both; }
+.workspace > * { min-width: 0; }
 .topbar { padding: 0 0 20px; gap: 12px; }
 .brand { gap: 10px; }
 .brand .eyebrow { font-size: 11px; letter-spacing: .045em; color: var(--muted); }
@@ -131,7 +131,12 @@ input[type='checkbox'] { min-height: auto; }
 .bottom-nav button:focus-visible { outline: 2px solid #f5c7ac; outline-offset: 2px; }
 .toast { bottom: calc(112px + env(safe-area-inset-bottom)); border-radius: 20px; padding: 14px 18px; font-size: 13px; }
 .offline-banner, .update-banner { border-radius: 18px; margin: 0 0 20px; top: calc(8px + env(safe-area-inset-top)); padding: 12px 14px; }
-@keyframes surface-in { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .day-choice-options,.day-choice-preview,.cardio-picker,.week-plan-dialog[open] { animation: fitness-reveal 150ms ease-out; }
+  .choice-preview-toggle svg,.main-dock .dock-glyph { transition: transform 140ms ease-out, background-color 140ms ease-out; }
+  .app-shell .koala-logo { animation-iteration-count: 1; }
+}
+@keyframes fitness-reveal { from { opacity: .75; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @media (hover: hover) {
   .primary:hover, .secondary:hover, .guide-links button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px #30473415; }
   .bottom-nav button:not(.active):hover { background: #ffffff12; color: #fff; }

@@ -42,3 +42,19 @@ it('abre la marca de hip thrust desde Hoy y conserva la privacidad de las medida
   expect(form.queryByLabelText('Peso corporal (kg)')).toBeNull()
   expect(form.queryByLabelText('Cadera (cm)')).toBeNull()
 })
+
+it('muestra únicamente el dato elegido y guarda juntos los cambios de dos categorías', async () => {
+  render(<ProgressScreen hide={false} notify={vi.fn()} onTraining={vi.fn()}/>)
+  fireEvent.click(screen.getByRole('button', {name:'Peso'}))
+  const form=within(screen.getByRole('region', {name:'Registro de progreso'}))
+  expect(screen.getAllByRole('button', {name:'Peso'})).toHaveLength(1)
+  fireEvent.change(form.getByLabelText('Peso corporal (kg)'), {target:{value:'59,2'}})
+  fireEvent.click(form.getByRole('button', {name:'Hip thrust'}))
+  expect(form.queryByLabelText('Peso corporal (kg)')).toBeNull()
+  expect(form.queryByLabelText('Cintura (cm)')).toBeNull()
+  fireEvent.change(form.getByLabelText('Carga máxima hip thrust (kg)'), {target:{value:'45'}})
+  fireEvent.click(form.getByRole('button', {name:'Guardar cambios'}))
+  await waitFor(()=>expect(save).toHaveBeenCalledWith('progress:test',expect.objectContaining({
+    weight:59.2,hipThrustKg:45,waist:70,hip:90,
+  })))
+})

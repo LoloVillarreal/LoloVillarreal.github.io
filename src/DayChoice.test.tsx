@@ -57,6 +57,26 @@ it('exige elegir también la rutina de fuerza en un viernes opcional',async()=>{
   expect(account.set).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Guardar mi elección'}))
   await waitFor(()=>expect(account.values['training:2026-11-13']).toMatchObject({title:'Tren superior y abdomen'}))
 })
+it('permite revisar las fotos antes de decidir y solo abre la sesión de hoy después de confirmar el guardado',async()=>{
+  vi.setSystemTime(new Date('2026-11-12T12:00:00'))
+  const saved=vi.fn()
+  try {
+    mount('2026-11-12',saved)
+    fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
+    fireEvent.click(screen.getByRole('button',{name:/Glúteos y femorales/}))
+    fireEvent.click(screen.getByRole('button',{name:/Ver los .* ejercicios/}))
+    expect(screen.getByRole('button',{name:/Ver foto y técnica de Hip thrust/})).toBeTruthy()
+    expect(account.set).not.toHaveBeenCalled()
+    account.flush.mockResolvedValueOnce(undefined).mockRejectedValueOnce(Error('Sin conexión'))
+    fireEvent.click(screen.getByRole('button',{name:'Guardar y empezar'}))
+    await screen.findByRole('alert')
+    expect(saved).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button',{name:'Reintentar guardado'}))
+    await waitFor(()=>expect(saved).toHaveBeenCalledWith(true))
+    expect(Object.keys(account.values)).toEqual(['training:2026-11-12'])
+    expect(account.set).toHaveBeenCalledOnce()
+  } finally {vi.useRealTimers()}
+})
 it('ignora la posición antigua sin planificación pero conserva el día entrenado anterior',()=>{
   const date='2026-10-19'
   account.values['attendance:'+date]={date,title:'Sesión ya hecha',type:'strength',completedAt:'2026-10-19T10:30:00Z'}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, ArrowLeft, Check, ChevronRight, Dumbbell, Leaf } from 'lucide-react'
+import { Activity, ArrowLeft, Check, ChevronRight, Dumbbell, Leaf, Play } from 'lucide-react'
 import { workoutDays } from './data/training'
 import { useAccount } from './lib/account'
 import { isoDate, parseDate } from './lib/dates'
@@ -30,6 +30,7 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
   const [custom,setCustom]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
   const previous=useRef(previousPlan)
   const heading=useRef<HTMLHeadingElement>(null)
+  const startAfterSave=useRef(false)
   const sending=useRef(false),alive=useRef(true),written=useRef(false)
   const [online,setOnline]=useState(navigator.onLine)
   const weekday=parseDate(date).getDay(),key='training:'+date
@@ -53,13 +54,14 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
     setPreview(false);setKind(next);setRoutineDay(undefined);setActivity('');setMinutes('');setError('')
     requestAnimationFrame(()=>heading.current?.focus({preventScroll:true}))
   }
-  async function save() {
+  async function save(start=false) {
     if(sending.current||!ready||!online||!account.complete)return
     let plan:TrainingPlan
     if(kind==='strength'&&strength)plan=planFromRoutine(strength)
     else if(kind==='cardio')plan={...planFromRoutine(workoutDays.find(day=>day.type==='cardio')!),title:cardioLabel(activity),cardio:{activity,minutes:duration}}
     else plan=planFromRoutine(workoutDays.find(day=>day.day===0)!)
     if(!trainingEntryValid(key,plan))return
+    if(!written.current)startAfterSave.current=start
     sending.current=true;setBusy(true);setError('')
     try {
       await account.flush()
@@ -73,7 +75,7 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
         written.current=true
       }
       await account.flush()
-      if(alive.current)onSaved(false)
+      if(alive.current)onSaved(startAfterSave.current)
     } catch(e) {
       if(alive.current)setError(e instanceof Error?e.message:'No se pudo confirmar la elección. Reintenta con conexión.')
     } finally {
@@ -111,23 +113,29 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
     {kind==='strength'&&<div className="day-choice-options" role="group" aria-label="Elige tu rutina">
 
       {workoutDays.filter(day=>day.type==='strength').map(day=><button key={day.day} disabled={busy||written.current}
-        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>setRoutineDay(day.day)}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
+        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>{setRoutineDay(day.day);setPreview(false)}}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
       <button className="text-button" disabled={busy||written.current} onClick={()=>setCustom(true)}>Crear mi propia rutina</button>
     </div>}
     {kind==='cardio'&&<CardioPicker activity={activity} minutes={minutes} disabled={busy||written.current}
       onActivity={setActivity} onMinutes={setMinutes}/>}
     {kind==='recovery'&&<p>El descanso quedará en tu plan. Tus días entrenados se cuentan por separado.</p>}
-    {kind&&ready&&<button className="primary day-choice-confirm full" disabled={!ready||busy||!online||!account.complete}
-      onClick={save}><Check size={17}/>{busy?'Guardando…':written.current?'Reintentar guardado':kind==='recovery'?'Guardar descanso':'Guardar mi elección'}</button>}
     {!online&&<p className="small-note" role="status">Conéctate para guardar tu elección.</p>}
-    {!online&&ready&&kind!=='recovery'&&!preview&&<button className="secondary full" onClick={()=>setPreview(true)}>Consultar esta guía sin guardar</button>}
+    {ready&&(kind==='strength'||((!online||preview)&&kind==='cardio'))&&<button type="button" className="text-button choice-preview-toggle" aria-expanded={preview} onClick={()=>setPreview(!preview)}>
+      {preview?'Ocultar vista previa':!online?'Consultar esta guía sin guardar':`Ver los ${strength?.exercises.length} ejercicios`}<ChevronRight size={16} aria-hidden="true"/>
+    </button>}
     {preview&&ready&&kind!=='recovery'&&<section className="day-choice-preview" aria-label="Guía temporal">
-      <h3>{kind==='strength'?strength?.title:cardioLabel(activity)}</h3><p className="small-note">Consulta temporal. Puedes guardar tu elección cuando vuelvas a tener conexión.</p>
-      {kind==='strength'?<div className="tools-exercises">{strength?.exercises.map(exercise=><article key={exercise.id}>
+      <h3>{kind==='strength'?strength?.title:cardioLabel(activity)}</h3><p className="small-note">{!online?'Consulta temporal. Puedes guardar tu elección cuando vuelvas a tener conexión.':kind==='strength'?'Toca una foto para ver la técnica.':'Tu elección aún no está guardada.'}</p>
+      {kind==='strength'?<div className="choice-preview-exercises">{strength?.exercises.map(exercise=><article key={exercise.id}>
         <ExercisePhoto exercise={exercise}/><div><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exercise.unit==='seconds'?'s':'reps'}</small></div>
       </article>)}</div>:<p>{minutes} minutos de {cardioLabel(activity).toLocaleLowerCase('es')}.</p>}
-      <button className="text-button" onClick={()=>setPreview(false)}>Cerrar la guía</button>
     </section>}
+    {kind&&ready&&<div className="choice-save-actions">
+      {date===isoDate()&&kind!=='recovery'&&!returnToRecord&&online&&!written.current&&<button type="button" className="primary full" disabled={busy||!account.complete} onClick={()=>save(true)}>
+        <Play size={17} aria-hidden="true"/>{busy?'Guardando…':'Guardar y empezar'}
+      </button>}
+      <button type="button" className={date===isoDate()&&kind!=='recovery'&&!returnToRecord&&online&&!written.current?'text-button':'primary full'} disabled={busy||!online||!account.complete}
+        onClick={()=>save(false)}>{busy?'Guardando…':written.current?'Reintentar guardado':kind==='recovery'?'Guardar descanso':'Guardar mi elección'}</button>
+    </div>}
     {!account.complete&&online&&!account.loading&&<button className="text-button" onClick={()=>account.refresh().catch(()=>setError('No se pudo cargar el plan. Reintenta con conexión.'))}>Cargar mis datos para elegir</button>}
     {(previous.current || returnToRecord) && !written.current && <button type="button" className="text-button day-choice-back" disabled={busy} onClick={onCancel}>Cancelar cambio</button>}
     {error&&<p role="alert" className="warning">{error}</p>}

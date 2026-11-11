@@ -1,20 +1,77 @@
-import { useState } from 'react'
-import { ArrowLeft, Calculator, Dumbbell, Library, Scale, Timer } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { ArrowLeft, BookOpen, Calculator, ChevronRight, Dumbbell, Library, Scale, Timer, Utensils } from 'lucide-react'
 import { Calculators, NutritionScreen } from './screens'
 import { RestTimer } from './RestTimer'
-import ExercisePhoto from './ExercisePhoto'
-import { exerciseLibrary, matchesExercise } from './lib/exercise-library'
+import { ExerciseDetails } from './ExercisePhoto'
+import { exerciseImage, exerciseLibrary, matchesExercise } from './lib/exercise-library'
 import { kgToLb, lbToKg, platesPerSide } from './lib/gym-tools'
 import { tips } from './data/tips'
+import type { Exercise } from './types'
+
+const tools = {
+ timer: {title:'Descansos', hint:'Cronometra el tiempo entre series', icon:Timer},
+ plates: {title:'Discos por lado', hint:'Calcula cómo cargar la barra', icon:Dumbbell},
+ convert: {title:'Conversor kg / lb', hint:'Pasa de kilos a libras o al revés', icon:Scale},
+ library: {title:'Biblioteca de ejercicios', hint:'Consulta fotos, técnica y alternativas', icon:Library},
+ calc: {title:'Calculadoras', hint:'Consulta IMC, energía y macronutrientes', icon:Calculator},
+ tips: {title:'Guía práctica', hint:'Dudas habituales del entrenamiento', icon:BookOpen},
+ food: {title:'Ideas para comer', hint:'Consulta desayunos y menús', icon:Utensils},
+}
+type ToolId = keyof typeof tools
+
 export default function ToolsScreen({notify,tool,setTool}:{notify:(text:string)=>void;tool:string;setTool:(tool:string)=>void}){
  const [seconds,setSeconds]=useState(90),[total,setTotal]=useState('60'),[bar,setBar]=useState('20'),[value,setValue]=useState('20'),[unit,setUnit]=useState('kg'),[query,setQuery]=useState(''),[limit,setLimit]=useState(30)
- const titles:Record<string,string>={timer:'Descansos',plates:'Discos por lado',convert:'Conversor kg / lb',library:'Biblioteca de ejercicios',calc:'Calculadoras',food:'Ideas para comer',tips:'Guía práctica'}
- const plates=total!==''&&bar!==''?platesPerSide(+total,+bar):null,valid=value!==''&&Number.isFinite(+value)&&+value>=0,visible=exerciseLibrary.filter(e=>matchesExercise(e,query))
- return <>{tool?<section className="card tools-heading"><button className="text-button" onClick={()=>setTool('')}><ArrowLeft size={16}/>Todas las herramientas</button><h2>{titles[tool]}</h2></section>:<><div className="tools-grid" aria-label="Herramientas disponibles">{([['timer','Descansos','Temporizador ajustable',Timer],['plates','Discos por lado','Prepara tu barra',Dumbbell],['convert','kg ↔ lb','Convierte cargas',Scale],['library','Ejercicios','Fotos, técnica y músculos',Library],['calc','Calculadoras','Estimaciones personales',Calculator]] as const).map(([id,title,description,Icon])=><button key={id} onClick={()=>setTool(id)}><Icon/><strong>{title}</strong><small>{description}</small></button>)}</div><section className="card"><details><summary>Curiosidades y recursos</summary><div className="tools-secondary"><button className="secondary" onClick={()=>setTool('tips')}>Guía práctica</button><button className="secondary" onClick={()=>setTool('food')}>Ideas para comer</button></div><p className="small-note">Las ideas de alimentación siguen disponibles aquí como consulta opcional.</p></details></section></>}
- {tool==='timer'&&<><section className="card"><label>Duración del descanso<select value={seconds} onChange={e=>setSeconds(+e.target.value)}>{[30,45,60,90,120,150,180,240,300].map(n=><option key={n} value={n}>{n} segundos</option>)}</select></label><p className="small-note">Al salir de esta herramienta se cierra este temporizador. No registra un entrenamiento.</p></section><RestTimer key={seconds} seconds={seconds}/></>}
+ const [selectedExercise,setSelectedExercise]=useState<Exercise|null>(null)
+ const [resourcesOpen,setResourcesOpen]=useState(tool==='tips'||tool==='food')
+ const titleRef=useRef<HTMLHeadingElement>(null),lastTool=useRef(tool)
+ const exerciseTrigger=useRef<HTMLButtonElement|null>(null),searchInput=useRef<HTMLInputElement>(null)
+ useEffect(()=>{
+   if(!selectedExercise && exerciseTrigger.current){
+     exerciseTrigger.current.focus()
+     exerciseTrigger.current=null
+   }
+ },[selectedExercise])
+ useEffect(()=>{
+   if(tool===lastTool.current) return
+   const previous=lastTool.current
+   lastTool.current=tool
+   if(tool) titleRef.current?.focus()
+   else document.getElementById('tool-open-'+previous)?.focus()
+ },[tool])
+ const plates=total!==''&&bar!==''?platesPerSide(+total,+bar):null,valid=value!==''&&Number.isFinite(+value)&&+value>=0
+ const visible=tool==='library'?exerciseLibrary.filter(e=>matchesExercise(e,query)):[]
+ const search=(text:string)=>{setQuery(text);setLimit(30)}
+ const toolRow=(id:ToolId)=>{
+   const {title,hint,icon:Icon}=tools[id]
+   return <button key={id} id={'tool-open-'+id} className="tool-row" onClick={()=>setTool(id)}>
+     <span className="tool-row-icon"><Icon size={20} aria-hidden="true"/></span>
+     <span><strong>{title}</strong><small>{hint}</small></span><ChevronRight size={17} aria-hidden="true"/>
+   </button>
+ }
+ return <>{tool?<header className="tools-heading"><button className="text-button" onClick={()=>setTool('')}><ArrowLeft size={16}/>Todas las herramientas</button><h2 ref={titleRef} tabIndex={-1}>{tools[tool as ToolId]?.title}</h2></header>:<>
+   <section className="card tool-menu" aria-labelledby="gym-tools-title"><h2 id="gym-tools-title">En el gimnasio</h2>{(['timer','plates','convert','library'] as const).map(toolRow)}</section>
+   <section className="card tool-menu" aria-labelledby="reference-tools-title"><h2 id="reference-tools-title">Para consultar</h2>{toolRow('calc')}
+     <details open={resourcesOpen} onToggle={event=>setResourcesOpen(event.currentTarget.open)}><summary>Curiosidades y recursos</summary>{toolRow('tips')}{toolRow('food')}</details>
+   </section></>}
+ {tool==='timer'&&<><RestTimer key={seconds} seconds={seconds}/><section className="card"><h3 id="tool-duration-title">Duración del descanso</h3>
+   <div className="tool-choices tool-durations" role="group" aria-labelledby="tool-duration-title">{[30,45,60,90,120,150,180,240,300].map(n=><button key={n} aria-pressed={seconds===n} onClick={()=>setSeconds(n)}>{n<60?n+' s':n%60===0?n/60+' min':Math.floor(n/60)+' min '+n%60+' s'}</button>)}</div>
+   <p className="small-note">Cambiar la duración reinicia el reloj. Al salir de Descansos se detiene.</p></section></>}
  {tool==='plates'&&<section className="card"><p>Peso total = barra + discos de ambos lados.</p><div className="form-grid"><label>Peso total (kg)<input type="number" min="0" step="0.5" value={total} onChange={e=>setTotal(e.target.value)}/></label><label>Peso de la barra (kg)<input type="number" min="0" step="0.5" value={bar} onChange={e=>setBar(e.target.value)}/></label></div>{plates?<div className="plate-result"><h3>En cada lado</h3>{plates.plates.length?plates.plates.map(p=><span key={p.weight}>{p.count} × {p.weight} kg</span>):<p>Sin discos.</p>}{plates.remainder>0&&<p className="warning">Faltan {plates.remainder} kg por lado: necesitas discos más pequeños o ajustar el peso total.</p>}</div>:<p className="warning">El peso total debe ser igual o mayor que el de la barra.</p>}<p className="small-note">Supone discos disponibles de 25, 20, 15, 10, 5, 2,5 y 1,25 kg, sin contar cierres. Es un reparto de la carga que elijas, no una recomendación de peso.</p></section>}
- {tool==='convert'&&<section className="card"><label>Convertir desde<select value={unit} onChange={e=>setUnit(e.target.value)}><option value="kg">Kilogramos</option><option value="lb">Libras</option></select></label><label>Peso ({unit})<input type="number" min="0" step="any" value={value} onChange={e=>setValue(e.target.value)}/></label>{valid&&<div className="result-callout"><strong>{(unit==='kg'?kgToLb(+value):lbToKg(+value)).toLocaleString('es',{maximumFractionDigits:2})} {unit==='kg'?'lb':'kg'}</strong></div>}</section>}
- {tool==='library'&&<section className="card"><label>Buscar ejercicio<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setLimit(30)}} placeholder="Nombre o músculo"/></label><p className="small-note">Toca la foto para ver la ficha. {visible.length} ejercicios.</p><div className="tools-exercises">{visible.slice(0,limit).map(e=><article key={e.hevyId}><ExercisePhoto exercise={e}/><div><strong>{e.name}</strong><small>{e.muscle}</small></div></article>)}</div>{visible.length>limit&&<button className="secondary full" onClick={()=>setLimit(n=>n+30)}>Ver más ejercicios</button>}</section>}
+ {tool==='convert'&&<section className="card"><div className="tool-choices tool-units" role="group" aria-label="Sentido de la conversión">
+   <button aria-pressed={unit==='kg'} onClick={()=>setUnit('kg')}>De kg a lb</button><button aria-pressed={unit==='lb'} onClick={()=>setUnit('lb')}>De lb a kg</button></div>
+   <label>Peso ({unit})<input type="number" inputMode="decimal" min="0" step="any" value={value} onChange={e=>setValue(e.target.value)}/></label>
+   <div className="result-callout" role="status">{valid?<strong>{(unit==='kg'?kgToLb(+value):lbToKg(+value)).toLocaleString('es',{maximumFractionDigits:2})} {unit==='kg'?'lb':'kg'}</strong>:'Introduce un peso igual o mayor que cero.'}</div></section>}
+ {tool==='library'&&<section className="card"><label>Buscar ejercicio<input ref={searchInput} type="search" value={query} onChange={e=>search(e.target.value)} placeholder="Nombre, músculo o material"/></label>
+   <div className="tool-search-shortcuts" role="group" aria-label="Búsquedas rápidas">{['Glúteos','Core','Sin material'].map(term=><button key={term} aria-pressed={query===term} onClick={()=>search(query===term?'':term)}>{term}</button>)}</div>
+   <p className="small-note" role="status">{visible.length===0?'No encontramos ejercicios con esa búsqueda.':visible.length===1?'1 ejercicio.':`Mostrando ${Math.min(limit,visible.length)} de ${visible.length} ejercicios.`}</p>
+   {!visible.length&&<button className="secondary" onClick={()=>{search('');searchInput.current?.focus()}}>Borrar búsqueda</button>}
+   <div className="tool-library">{visible.slice(0,limit).map(exercise=><button key={exercise.hevyId} className="tool-row" aria-haspopup="dialog" aria-label={`Ver foto y técnica de ${exercise.name}`} onClick={event=>{exerciseTrigger.current=event.currentTarget;setSelectedExercise(exercise)}}>
+     <img src={exerciseImage(exercise)} onError={e=>{if(!e.currentTarget.src.endsWith('/exercise-placeholder.svg'))e.currentTarget.src='./exercise-placeholder.svg'}} alt="" width="40" height="40" loading="lazy"/>
+     <span><strong>{exercise.name}</strong><small>{exercise.muscle}</small></span><ChevronRight size={16} aria-hidden="true"/>
+   </button>)}</div>
+   {selectedExercise&&createPortal(<ExerciseDetails exercise={selectedExercise} onClose={()=>setSelectedExercise(null)}/>,document.body)}
+   {visible.length>limit&&<button className="secondary full" onClick={()=>setLimit(n=>n+30)}>Ver más ejercicios</button>}</section>}
  {tool==='calc'&&<Calculators notify={notify}/>}{tool==='food'&&<NutritionScreen/>}{tool==='tips'&&<section className="card">{tips.map(([title,text])=><details key={title}><summary>{title}</summary><p>{text}</p></details>)}</section>}
  </>
 }

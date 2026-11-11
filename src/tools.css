@@ -1,1 +1,39 @@
-.tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tools-grid>button{display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--text);min-height:130px}.tools-grid svg{color:var(--olive)}.tools-grid small{color:var(--muted);font-size:12px}.tools-heading h2{margin-top:14px}.tools-secondary{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.tools-exercises article{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.tools-exercises article>div{display:flex;flex-direction:column;gap:4px;font-size:14px}.tools-exercises small{color:var(--muted)}.plate-result{background:var(--surface2);padding:16px;border-radius:16px;margin-top:16px}.plate-result>span{display:inline-block;background:var(--surface);border:1px solid var(--line);padding:12px;border-radius:12px;margin:4px}.training-calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.training-calendar-day{min-width:0}.training-calendar-day.is-trained,.training-week-strip .is-trained{background:var(--olive)!important;color:var(--on-accent,white)!important}.training-calendar-day.is-trained .calendar-attendance-marker{color:inherit}.training-calendar-day.is-selected,.training-week-strip .selected{outline:2px solid var(--coral);outline-offset:-2px}.calendar-unrecorded{font-size:14px;color:var(--muted)}.attendance-month-summary{font-size:12px;color:var(--muted);margin:10px 0}.training-calendar.is-compact .training-calendar-legend{display:flex}.training-week-strip .week-status{font-size:8px;white-space:nowrap}.training-week-strip button{min-height:64px}.training-week-strip button svg{position:static}.training-calendar-day small{font-size:8px}.training-calendar-legend{gap:10px}.training-calendar-day.is-selected:not(.is-trained){background:var(--surface2);color:var(--text)}
+/* Large row targets keep the gym tools usable between sets. */
+.tool-menu h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.tool-menu details { margin: 0; padding: 0; border: 0; }
+.tool-menu summary { padding-block: 12px; min-height: 44px; color: var(--muted); }
+.tool-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px;
+  align-items: center; width: 100%; min-height: 56px; padding: 9px 0;
+  border: 0; border-radius: 0; background: transparent; color: var(--text);
+  text-align: left; line-height: 1.35;
+}
+.tool-row + .tool-row, .tool-menu details { border-top: 1px solid var(--line); }
+.tool-row > span:nth-child(2) { display: grid; gap: 2px; }
+.tool-row small { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.tool-row > svg { color: var(--muted); }
+.tool-row-icon, .tool-library img { width: 40px; height: 40px; border-radius: 11px; }
+.tool-row-icon { display: grid; place-items: center; color: var(--olive); background: var(--surface2); }
+.tool-library img { object-fit: contain; background: white; border: 1px solid var(--line); }
+.tool-library .tool-row { min-height: 52px; padding-block: 6px; font-size: .94rem; }
+.tools-heading .text-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.tools-heading h2 { margin: 4px 0 0; }
+.tool-choices, .tool-search-shortcuts { display: grid; gap: 6px; }
+.tool-choices button, .tool-search-shortcuts button {
+  min-width: 0; min-height: 44px; padding: 6px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  line-height: 1.25; font-size: .88rem;
+}
+.tool-choices [aria-pressed="true"], .tool-search-shortcuts [aria-pressed="true"] {
+  border-color: var(--olive); background: var(--olive); color: var(--on-accent);
+}
+.tool-units { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+.tool-durations, .tool-search-shortcuts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tool-search-shortcuts button { border-radius: 24px; font-weight: 500; }
+@media (prefers-reduced-motion: no-preference) {
+  .tool-row-icon, .tool-choices button, .tool-search-shortcuts button {
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .tool-row:active .tool-row-icon { background: var(--olive); color: var(--on-accent); }
+}
+.plate-result{background:var(--surface2);padding:16px;border-radius:16px;margin-top:16px}.plate-result>span{display:inline-block;background:var(--surface);border:1px solid var(--line);padding:12px;border-radius:12px;margin:4px}.training-calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.training-calendar-day{min-width:0}.training-calendar-day.is-trained,.training-week-strip .is-trained{background:var(--olive)!important;color:var(--on-accent,white)!important}.training-calendar-day.is-trained .calendar-attendance-marker{color:inherit}.training-calendar-day.is-selected,.training-week-strip .selected{outline:2px solid var(--coral);outline-offset:-2px}.calendar-unrecorded{font-size:14px;color:var(--muted)}.attendance-month-summary{font-size:12px;color:var(--muted);margin:10px 0}.training-calendar.is-compact .training-calendar-legend{display:flex}.training-week-strip .week-status{font-size:8px;white-space:nowrap}.training-week-strip button{min-height:64px}.training-week-strip button svg{position:static}.training-calendar-day small{font-size:8px}.training-calendar-legend{gap:10px}.training-calendar-day.is-selected:not(.is-trained){background:var(--surface2);color:var(--text)}

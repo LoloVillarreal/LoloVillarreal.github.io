@@ -1,15 +1,21 @@
 // @vitest-environment jsdom
+import 'fake-indexeddb/auto'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AttendanceControl } from './TrainingCalendar'
 import { useGuidePosition } from './lib/guide-position'
 import { workoutDays } from './data/training'
+import { TrainingScreen } from './screens'
+import { planFromRoutine } from './lib/training-plan'
 
 const account=vi.hoisted(()=>({
   session:{user:{id:'QA-A'}}, values:{} as Record<string,unknown>, complete:true, loading:false,
   saving:false, error:'', set:vi.fn(), flush:vi.fn(), remove:vi.fn()
 }))
 vi.mock('./lib/account',()=>({useAccount:()=>account}))
+vi.mock('./lib/storage',async importOriginal=>({
+  ...await importOriginal<typeof import('./lib/storage')>(),useStored:()=>[1,vi.fn()]
+}))
 
 beforeEach(()=>{
   localStorage.clear()
@@ -19,6 +25,36 @@ beforeEach(()=>{
   Object.defineProperty(navigator,'onLine',{configurable:true,value:true})
 })
 afterEach(()=>{cleanup();Object.defineProperty(navigator,'onLine',{configurable:true,value:true})})
+
+it('lets a reader jump to any exercise and return without registering or editing the day',()=>{
+  const date='2026-10-19',routine=workoutDays[0]
+  account.values['training:'+date]=planFromRoutine(routine)
+  const scroll=vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
+  function Guide(){
+    const position=useGuidePosition('QA-A')
+    return <TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} {...position} onDirtyChange={vi.fn()}/>
+  }
+  try {
+    render(<Guide/>)
+    fireEvent.click(screen.getByRole('button',{name:'Empezar entrenamiento'}))
+    const next=screen.getByRole('button',{name:'Siguiente ejercicio '+routine.exercises[1].name})
+    fireEvent.click(next)
+    const toggle=screen.getByRole('button',{name:/Ver ejercicios\. Ejercicio 2 de/})
+    fireEvent.click(toggle)
+    const current=screen.getByRole('button',{current:'step'})
+    fireEvent.keyDown(current,{key:'Escape'})
+    expect(document.activeElement).toBe(toggle)
+    expect(screen.queryByRole('list',{name:'Ejercicios de esta sesión'})).toBeNull()
+    fireEvent.click(toggle)
+    const last=routine.exercises[routine.exercises.length-1]
+    fireEvent.click(screen.getByRole('button',{name:routine.exercises.length+' '+last.name}))
+    expect(document.activeElement).toBe(screen.getByRole('heading',{name:last.name}))
+    expect(screen.getByRole('button',{name:'Terminar y registrar'})).toBeTruthy()
+    fireEvent.click(screen.getByRole('button',{name:'Ejercicio anterior'}))
+    expect(document.activeElement).toBe(screen.getByRole('heading',{name:routine.exercises[routine.exercises.length-2].name}))
+    expect(account.set).not.toHaveBeenCalled()
+  } finally {scroll.mockRestore()}
+})
 
 it('remembers the guide after reopening, isolates accounts and keeps the place when the summary opens',()=>{
   const hook=renderHook(({owner}:{owner:string})=>useGuidePosition(owner),{initialProps:{owner:'QA-A'}})

@@ -18,8 +18,8 @@
 .frequency-track span { width: 100%; background: var(--olive); border-radius: 9px; }
 .frequency-chart li:last-child .frequency-track span { background: var(--coral); }
 .capture-options { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-top: 20px; }
-.capture-options button { display: flex; justify-content: space-between; align-items: center; min-height: 60px; gap: 8px; padding: 16px; text-align: left; }
-.capture-options svg { flex-shrink: 0; }
+.capture-options button { display: flex; justify-content: flex-start; align-items: center; min-height: 48px; gap: 10px; padding: 12px; text-align: left; }
+.capture-options svg { color: var(--olive); flex-shrink: 0; }
 .draft-resume { margin-top: 18px; text-align: left; }
 .progress-entry { scroll-margin-top: 18px; }
 .progress-entry > .section-head { align-items: flex-start; gap: 12px; }
@@ -31,6 +31,13 @@
 .progress-entry fieldset.progress-inputs { border: 0; padding: 0; margin: 0; }
 .progress-entry legend { padding: 0 8px; font-size: 13px; font-weight: 700; }
 .progress-entry fieldset .form-grid { margin-top: 0; }
+.progress-overview .progress-key-metrics { grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); }
+.progress-overview .progress-weight { margin-top: 12px; border: 0; }
+.progress-weight summary { min-height: 44px; align-content: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .progress-inputs > fieldset { animation: progress-field-appear 160ms ease-out; }
+  @keyframes progress-field-appear { from { opacity: .6; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+}
 .progress-entry input { min-height: 52px; font-size: 16px; }
 .progress-entry .warning { margin: 18px 0; }
 .energy-scale { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; margin: 18px 0 10px; }

@@ -4,7 +4,7 @@ import { twelveWeekPlan } from './data/training'
 import { useStored } from './lib/storage'
 import './week-plan.css'
 
-export function WeekPlan() {
+export function WeekPlan({from='Inicio'}:{from?:'Inicio'|'Entrenos'}={}) {
   const [week,setWeek] = useStored('guideWeek',1)
   const [viewed,setViewed] = useState(week)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -28,7 +28,7 @@ export function WeekPlan() {
       <span><strong>Ver plan de 12 semanas</strong><small>Ahora sigues la semana {week}</small></span><ChevronRight size={18} aria-hidden="true"/>
     </button>
     <dialog className="week-plan-dialog" ref={dialog} aria-labelledby={titleId} onClose={()=>trigger.current?.focus({preventScroll:true})}>
-      <button type="button" className="text-button week-plan-back" onClick={close}><ArrowLeft size={16}/>Volver a Inicio</button>
+      <button type="button" className="text-button week-plan-back" onClick={close}><ArrowLeft size={16}/>Volver a {from}</button>
       <h2 ref={heading} tabIndex={-1} id={titleId}>Plan de 12 semanas</h2>
       <p className="week-plan-label">Toca una semana para ver su objetivo.</p>
       <div role="group" aria-label="Semanas del plan" className="week-plan-grid">

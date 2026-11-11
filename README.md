@@ -4,6 +4,8 @@ Guía de entrenamiento y alimentación con calculadoras y progreso privado entre
 
 Sitio: https://lolovillarreal.github.io/
 
+[Cómo usar el plan: elegir un entrenamiento, consultar ejercicios y guardar marcas](docs/RECORRIDOS-FITNESS.md)
+
 ## Experiencia
 
 - Guía de 12 semanas con un objetivo y una fase claros.
@@ -29,7 +31,7 @@ Las imágenes de ejercicios son fichas estándar verificadas mediante el conecto
 
 ## Acceso
 
-La cuenta del plan es independiente de la cuenta de administración de Supabase y de Hevy. Para entrar, abrir Progreso o Ajustes y usar el correo y contraseña creados para el plan. La misma cuenta permite recuperar los datos desde otro dispositivo.
+Al abrir la app por primera vez, usa el correo y la contraseña del plan en la pantalla de inicio de sesión. La misma cuenta da acceso a los dos apartados y permite recuperar los datos en otro dispositivo. Es independiente de las cuentas de administración de Supabase y de Hevy.
 
 Para mantener una configuración gratuita sin un proveedor de correo, el administrador crea la cuenta desde Authentication → Users → Add user → Create new user, activando Auto Confirm User y eligiendo una contraseña personal. La recuperación de acceso se gestiona desde el panel privado. No hay alta pública dentro de la app.
 

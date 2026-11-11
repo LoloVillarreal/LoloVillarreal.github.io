@@ -27,6 +27,8 @@ it('después de entrenar, Inicio ofrece ver el registro y preparar fuerza otro d
   expect(go).toHaveBeenLastCalledWith('training',wednesday)
   fireEvent.click(screen.getByRole('button',{name:'Elegir entrenamiento del jueves'}))
   expect(go).toHaveBeenLastCalledWith('training','2026-11-12')
+  fireEvent.click(screen.getByRole('button',{name:/lunes, 9 de noviembre, sin registro/i}))
+  expect(go).toHaveBeenLastCalledWith('training','2026-11-09')
   expect(account.set).not.toHaveBeenCalled()
 })
 it('propone una fecha de fuerza disponible sin desplazar un descanso guardado',()=>{

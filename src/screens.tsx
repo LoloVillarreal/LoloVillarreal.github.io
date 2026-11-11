@@ -2,10 +2,9 @@ import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
 import { exerciseUnit } from './lib/exercise-library'
 import { useEffect, useRef, useState, type SetStateAction } from 'react'
-import { Apple, ArrowLeft, Calculator, Check, ChevronRight, Dumbbell, Heart, Play, Salad } from 'lucide-react'
-import { workoutDays, twelveWeekPlan, hevyExport } from './data/training'
+import { Apple, ArrowLeft, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Heart, Play, Salad } from 'lucide-react'
+import { workoutDays, hevyExport } from './data/training'
 import { foods, menu } from './data/nutrition'
-import { tips } from './data/tips'
 import { bmi, carbsForCalories, dayNutrients, hipThrustProgress, macroCalories, maintenanceRange, mifflin, movingAverage } from './lib/calculations'
 import { backupJson, download, progressCsv } from './lib/files'
 import { loadBackup, validateBackup } from './lib/db'
@@ -112,23 +111,25 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
       <button className="home-week-open" onClick={()=>go('progress')}><span>
         <strong>Mi progreso</strong><small>{account.loading?'Cargando…':account.error?'Consultar mis registros':`${trainingDays} ${trainingDays===1?'día entrenado':'días entrenados'} esta semana`}</small>
       </span><ChevronRight size={18}/></button>
-      {!account.loading && !account.error && <ol aria-label="Actividad de la semana" className="home-week-strip">
-        {weekStrip.map(({date,trained},i)=><li key={date} className={trained?'trained':''} aria-current={date===today?'date':undefined}
-          aria-label={dateLabel(date)+(trained?', entrenado':date<=today?', sin registro':', próximo')}>
+      {!account.loading && !account.error && <><p className="home-week-hint">Toca un día para ver su entrenamiento.</p><ol aria-label="Actividad de la semana" className="home-week-strip">
+        {weekStrip.map(({date,trained},i)=><li key={date} className={trained?'trained':''}><button type="button" onClick={()=>go('training',date)} aria-current={date===today?'date':undefined}
+          aria-label={dateLabel(date)+(date===today?', hoy':'')+(trained?', entrenado':date<=today?', sin registro':', próximo')}>
           <span aria-hidden="true">{['L','M','X','J','V','S','D'][i]}</span>
-          <i aria-hidden="true">{trained?<Check size={12}/>:<span/>}</i>
-        </li>)}
-      </ol>}
+          <i aria-hidden="true">{trained?<Check size={12}/>:parseDate(date).getDate()}</i>
+        </button></li>)}
+      </ol></>}
     </section>
     <div className="card simple-day-links home-secondary-links">
       <WeekPlan/>
-      <a href="#prueba-gimnasio">Practicar con un ejemplo<ChevronRight size={16}/></a>
     </div>
   </div>
 }
 
 export function MoreScreen({tab,setTab,settings,saveSettings,legacyAvailable,notify}:{tab:'calc'|'tips'|'settings';setTab:(tab:'calc'|'tips'|'settings')=>void;settings:AppSettings;saveSettings:Setter<AppSettings>;legacyAvailable:boolean;notify:Notify}){
-  return <><div className="segmented">{([['settings','Mi cuenta'],['calc','Calculadoras'],['tips','Consejos']] as const).map(([id,label])=><button key={id} className={tab===id?'active':''} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>{tab==='tips'?<section className="card"><h2>Guía práctica</h2>{tips.map(([title,text])=><details key={title}><summary>{title}</summary><p>{text}</p></details>)}</section>:<SettingsScreen settings={settings} saveSettings={saveSettings} legacyAvailable={legacyAvailable} notify={notify}/>}</>
+  return <><div className="segmented settings-sections" role="group" aria-label="Apartados de ajustes">{([['settings','Mi cuenta'],['tips','Ayuda']] as const).map(([id,label])=><button key={id} className={tab===id?'active':''} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>{tab==='tips'?<>
+    <section className="card simple-day-links"><a href="#prueba-gimnasio"><span><strong>Practicar con un ejemplo</strong><small>Prueba una sesión sin cambiar tu plan ni tu progreso.</small></span><ChevronRight size={18} aria-hidden="true"/></a></section>
+    <section className="card install-card"><Apple/><div><h2>Llévala a tu pantalla de inicio</h2><ol><li>Abre la web en Safari del iPhone.</li><li>Toca Compartir.</li><li>Elige «Añadir a pantalla de inicio».</li><li>Abre el plan e inicia sesión con tu cuenta.</li></ol></div></section>
+  </>:<SettingsScreen settings={settings} saveSettings={saveSettings} legacyAvailable={legacyAvailable} notify={notify}/>}</>
 }
 
 export function Calculators({notify}:{notify:Notify}){
@@ -162,7 +163,7 @@ function SettingsScreen({settings,saveSettings,legacyAvailable,notify}:{settings
   return <><AccountPanel/><section className="card"><h2>El espacio de Lolo</h2><p>Organiza tu preparación con la misma cuenta del plan.</p><button className="secondary full" onClick={()=>{location.hash='#police'}}>Entrar al apartado Policía Nacional</button></section><section className="card"><h2>A tu manera</h2><p>Apariencia</p><div className="theme-options" role="group" aria-label="Elegir apariencia">{themes.map(theme=><button key={theme.id} className={`theme-option theme-option--${theme.id}`} aria-pressed={currentTheme(settings)===theme.id} onClick={()=>saveSettings(v=>({...v,theme:theme.id,darkMode:theme.id==='dark'}))}><span className="theme-sample" aria-hidden="true"><i/><i/><i/></span><strong>{theme.label}</strong><span>{theme.id==='glass'?'Blanco y multicolor':theme.id==='dark'?'Suave por la noche':'Cálido y natural'}</span></button>)}</div><label className="toggle-row">Ocultar peso y medidas<input type="checkbox" checked={settings.hideSensitive} onChange={e=>saveSettings(v=>({...v,hideSensitive:e.target.checked}))}/></label><p className="privacy-note">La guía y sus imágenes funcionan sin conexión tras cargarse. El progreso y las calculadoras se guardan en una cuenta privada en Supabase; necesitan conexión para sincronizar. Al cerrar sesión, sus datos salen de la pantalla.</p></section>
     {account.session&&<section className="card"><h2>Tus copias de seguridad</h2>{!account.complete&&<p role="status">Para exportar o restaurar, primero carga la cuenta completa desde «Actualizar datos».</p>}<div className="button-stack"><button className="primary" disabled={copyingUnavailable} onClick={()=>void exportCloud('json')}>Exportar copia de mi cuenta</button><button className="secondary" disabled={copyingUnavailable||!cloudLogs.length} onClick={()=>void exportCloud('csv')}>Exportar progreso CSV</button><label className="file-label">Importar copia JSON<input type="file" accept="application/json" onChange={e=>{void readFile(e.target.files?.[0]);e.target.value=''}}/></label></div>{candidate&&<div className="import-review"><h3>Revisar antes de restaurar</h3><p>{candidate.progressLogs.length} registros de progreso y {Object.keys(candidate.localState??{}).filter(key=>key.startsWith('training:')).length} entrenamientos planificados y {Object.keys(candidate.localState??{}).filter(key=>key.startsWith('attendance:')).length} días entrenados. Se sustituirán los datos de esta cuenta y se descargará primero una copia de la versión actual.</p><p className="small-note">Las fotos y los registros de entreno de versiones anteriores no se subirán a la nube.</p><div className="button-row"><button className="primary" disabled={copyingUnavailable} onClick={restore}>Restaurar y sustituir mis datos</button><button className="secondary" onClick={()=>setCandidate(null)}>Cancelar</button></div></div>}</section>}
     {legacyAvailable&&<section className="card"><h2>Datos de la versión anterior</h2><p>Se han conservado en este dispositivo; no se suben automáticamente a ninguna cuenta.</p><button className="secondary full" onClick={async()=>{try{await storage.flush();download(backupJson(await loadBackup()),'plan-la-copia-anterior.json')}catch{notify('No se pudo exportar la copia anterior.')}}}>Descargar copia anterior</button></section>}
-    <section className="card install-card"><Apple/><div><h2>Llévala a tu pantalla de inicio</h2><ol><li>Abre la web en Safari del iPhone.</li><li>Toca Compartir.</li><li>Elige «Añadir a pantalla de inicio».</li><li>Abre el plan e inicia sesión con tu cuenta.</li></ol></div></section><section className="card"><details><summary>Compatibilidad con Hevy</summary><p>La guía usa únicamente nombres, IDs e imágenes del catálogo estándar de ejercicios. No contiene historial de ninguna cuenta ni sincroniza entrenamientos.</p><button className="secondary full" onClick={()=>download(JSON.stringify(hevyExport(),null,2),'plan-la-hevy-manual.json')}>Exportar rutina para uso manual</button></details><p className="small-note">PLAN Lolo & alexia · guía orientativa de entrenamiento y alimentación.</p></section><LoveNote/>
+    <section className="card"><details><summary>Compatibilidad con Hevy</summary><p>La guía usa únicamente nombres, IDs e imágenes del catálogo estándar de ejercicios. No contiene historial de ninguna cuenta ni sincroniza entrenamientos.</p><button className="secondary full" onClick={()=>download(JSON.stringify(hevyExport(),null,2),'plan-la-hevy-manual.json')}>Exportar rutina para uso manual</button></details><p className="small-note">PLAN Lolo & alexia · guía orientativa de entrenamiento y alimentación.</p></section><LoveNote/>
   </>
 }
 
@@ -249,7 +250,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       <details><summary>Antes de empezar</summary><p>Dedica unos minutos a moverte y realiza series de aproximación antes de las cargas de trabajo.</p><p className="small-note">RIR indica cuántas repeticiones más crees que podrías hacer con buena técnica.</p></details>
     </section> : null}
     {management}
-    <section className="card"><details><summary>Cómo avanzar durante las 12 semanas</summary>{twelveWeekPlan.map(x=><div className="phase" key={x.weeks}><b>Semanas {x.weeks}</b><div><strong>{x.name}</strong><p>{x.guidance}</p></div></div>)}</details><p className="small-note">Consulta las fichas durante el entreno y registra tu evolución en Progreso cuando te resulte útil.</p></section>
+    <section className="card simple-day-links"><WeekPlan from="Entrenos"/></section>
     <p className="source-note">Fichas e imágenes del catálogo estándar de <a href="https://www.hevyapp.com/" target="_blank" rel="noreferrer">Hevy</a>, consultado para esta guía. No hay sincronización con cuentas.</p>
   </>
 }
@@ -263,16 +264,32 @@ function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{
   const step=Math.max(0,Math.min(index,count-1))
   const exercise=day.exercises[step]
   const page=useRef<HTMLElement>(null)
+  const [indexOpen,setIndexOpen]=useState(false)
+  const indexButton=useRef<HTMLButtonElement>(null)
+  function focusExercise() {
+    page.current?.querySelector<HTMLElement>('[data-exercise-title]')?.focus({preventScroll:true})
+  }
   useEffect(()=>{
-    const heading=page.current?.querySelector<HTMLElement>('[data-exercise-title]')
-    heading?.focus({preventScroll:true})
+    setIndexOpen(false)
+    focusExercise()
   },[date,step])
   return <section className="training-session" ref={page} aria-label={day.title}>
     <header className="training-session-nav">
       <button className="text-button" onClick={onExit}><ArrowLeft size={16}/>Volver a la rutina</button>
-      {exercise&&<span>Ejercicio {step+1} de {count}</span>}
+      {count>1?<button className="session-index-toggle" ref={indexButton} aria-expanded={indexOpen} aria-controls="session-exercise-index"
+        aria-label={`${indexOpen?'Ocultar':'Ver'} ejercicios. Ejercicio ${step+1} de ${count}`} onClick={()=>setIndexOpen(!indexOpen)}>
+        Ejercicios <b>{step+1}/{count}</b><ChevronDown size={16} aria-hidden="true"/>
+      </button>:exercise&&<span>Ejercicio 1 de 1</span>}
     </header>
+    {count>1&&<ol id="session-exercise-index" className="session-exercise-index" aria-label="Ejercicios de esta sesión" hidden={!indexOpen}
+      onKeyDown={event=>{if(event.key==='Escape'){setIndexOpen(false);indexButton.current?.focus()}}}>
+      {day.exercises.map((item,position)=><li key={item.id}><button type="button" aria-current={position===step?'step':undefined}
+        onClick={()=>{setIndexOpen(false);if(position===step)focusExercise();else onStep(position)}}>
+        <span>{position+1}</span><strong>{item.name}</strong>{position===step&&<small>Actual</small>}
+      </button></li>)}
+    </ol>}
     {exercise?<div className="card training-session-card">
+      {count>1&&<div className="session-position-track" aria-hidden="true"><i style={{transform:`scaleX(${(step+1)/count})`}}/></div>}
       <ExerciseGuide exercise={exercise}/>
       <TodayReplacement date={date} exercise={exercise} index={step}/>
       {exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
@@ -280,7 +297,9 @@ function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{
         <RestTimer seconds={exercise.rest[1]}/>
       </details>}
       {step<count-1?
-        <button className="primary full training-session-next" onClick={()=>onStep(step+1)}>Siguiente ejercicio<ChevronRight size={17}/></button>:
+        <button className="primary full training-session-next" onClick={()=>onStep(step+1)}>
+          <span><small>Siguiente ejercicio</small><strong>{day.exercises[step+1].name}</strong></span><ChevronRight size={19} aria-hidden="true"/>
+        </button>:
         <AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
       {step>0&&<button className="text-button training-session-previous" onClick={()=>onStep(step-1)}><ArrowLeft size={16}/>Ejercicio anterior</button>}
     </div>:<>

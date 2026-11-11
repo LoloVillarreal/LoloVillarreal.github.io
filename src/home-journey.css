@@ -15,10 +15,11 @@
 .home-week-open > span { display:grid; gap:4px; }
 .home-week-open strong { font-size:18px; }
 .home-week-open small,.home-week-open svg { color:var(--muted); }
-.home-week-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; list-style:none; margin:14px 0 0; padding:0; }
-.home-week-strip li { display:grid; justify-items:center; gap:4px; font-size:11px; color:var(--muted); }
+.home-week-card .home-week-hint { margin:10px 0 4px; color:var(--muted); font-size:12px; }
+.home-week-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; list-style:none; margin:0; padding:0; }
+.home-week-strip button { display:grid; justify-items:center; align-content:center; gap:4px; min-height:48px; width:100%; border:0; border-radius:9px; padding:2px; background:transparent; font-size:11px; color:var(--muted); }
 .home-week-strip i { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--surface2); }
-.home-week-strip i span { height:3px; width:7px; border-radius:3px; background:var(--muted); }
+.home-week-strip i { font-style:normal; font-weight:650; }
 .home-week-strip .trained i { color:var(--on-accent); background:var(--olive); }
 .home-week-strip [aria-current=date] i { outline:1px solid var(--olive); outline-offset:2px; }
 .app-shell .workspace .home-secondary-links { padding-block:4px; }
