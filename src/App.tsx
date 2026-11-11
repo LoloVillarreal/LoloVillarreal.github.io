@@ -146,7 +146,7 @@ function Workspace(){
     {serviceNotice}
     <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Inicio',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
-    <main className={`workspace workspace--${section}`}>
+    <main className={`workspace workspace--${section}`} tabIndex={-1}>
       {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''}
@@ -166,13 +166,14 @@ function Workspace(){
       ] as const).map(([id,label,Icon])=>
         <button key={id} type="button" className={id==='home'?'dock-home':undefined}
           aria-current={id===section?'page':undefined}
-          onClick={()=>{
+          onClick={event=>{
             if(!go(id,undefined,id==='more'?'settings':undefined))return
             if(id==='home'){
               if(reader)setReader(null)
               setHomeVisit(previous=>previous+1)
               document.getElementById('fitness-scroll')?.scrollTo(0,0)
             }
+            if(event.detail===0)requestAnimationFrame(()=>document.querySelector<HTMLElement>('#fitness-scroll main')?.focus({preventScroll:true}))
           }}>
           <span className="dock-glyph"><Icon aria-hidden="true"/></span>
           <span className="dock-label">{label}</span>
