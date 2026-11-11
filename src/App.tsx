@@ -13,13 +13,15 @@ import SectionSwitch from './SectionSwitch'
 import './access.css'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
 
+const GymPreview=lazy(()=>import('./GymPreview'))
 const PolicePanel=lazy(()=>import('./police/PolicePanel'))
 
 function App(){return <StorageProvider><AccountProvider><Workspace/></AccountProvider></StorageProvider>}
 
 function Workspace(){
-  const [police,setPolice]=useState(location.hash==='#police')
-  useEffect(()=>{const change=()=>setPolice(location.hash==='#police');window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
+  const [route,setRoute]=useState(location.hash)
+  const police=route==='#police'
+  useEffect(()=>{const change=()=>setRoute(location.hash);window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
   const [navigation,setNavigation]=useStored('navigation',()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
@@ -100,6 +102,7 @@ function Workspace(){
       }}>Actualizar</button>
     </div>}
   </>
+  if(route==='#prueba-gimnasio')return <Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id}/></Suspense>
   if(police)return <>{serviceNotice}{toast&&<p className="toast" role="status">{toast}</p>}<Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onUpdateBlockedChange={setPoliceUpdateBlocked} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense></>
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
   const section=legacyCalc?'nutrition':navigation.section
