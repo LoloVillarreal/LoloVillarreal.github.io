@@ -1,16 +1,34 @@
-/* The surface has a transparent circular notch. The Home control sits inside
-   the notch, so the page is visible through the gap around the button. */
-.app-shell > .bottom-nav.main-dock {
+/* The dock has its own row. Only the content above it scrolls. */
+.fitness-viewport {
+  height:100vh;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+html:has(.fitness-viewport),body:has(.fitness-viewport) { overflow:hidden; overscroll-behavior:none; }
+#fitness-scroll {
+  flex:1 1 0;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior-y:contain;
+  scroll-padding-block:12px 32px;
+}
+body:has(dialog[open]) #fitness-scroll { overflow:hidden; }
+#fitness-scroll > .app-shell { min-height:100%; padding-bottom:32px; }
+.fitness-viewport > .bottom-nav.main-dock {
   --bar-surface: #293e32;
   --bar-text: #dce8dd;
   --bar-active: #fff;
   --home-surface: #f0f4e9;
   --home-ink: #314e3c;
   --notch-radius: 34px;
-  position: fixed;
+  position: relative;
   z-index: 30;
-  inset: auto auto max(8px, env(safe-area-inset-bottom, 0px)) 50%;
-  transform: translateX(-50%);
+  inset:auto;
+  transform:none;
+  align-self:center;
+  flex:none;
+  margin:0 0 max(4px, env(safe-area-inset-bottom, 0px));
   display: grid;
   grid-template-columns: repeat(5, minmax(0,1fr));
   width: min(450px, calc(100% - 20px));
@@ -26,10 +44,9 @@
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  filter: drop-shadow(0 5px 10px #10271930);
 }
-.app-shell > .main-dock[hidden] { display: none; }
-.app-shell > .main-dock::before {
+.fitness-viewport > .main-dock[hidden] { display: none; }
+.fitness-viewport > .main-dock::before {
   content: '';
   position: absolute;
   z-index: -1;
@@ -40,21 +57,21 @@
   -webkit-mask-image: radial-gradient(circle at 50% 3px, transparent var(--notch-radius), #000 calc(var(--notch-radius) + 1px));
   mask-image: radial-gradient(circle at 50% 3px, transparent var(--notch-radius), #000 calc(var(--notch-radius) + 1px));
 }
-.dark .app-shell > .main-dock {
+.dark .fitness-viewport > .main-dock {
   --bar-surface: #293c32;
   --bar-text: #deeadf;
   --home-surface: #e6efdb;
   --home-ink: #203b29;
 }
-.glass .app-shell > .main-dock {
+.glass .fitness-viewport > .main-dock {
   --bar-surface: #f5f8ff;
   --bar-text: #475770;
   --bar-active: #183e70;
   --home-surface: #fff;
   --home-ink: #274e81;
 }
-.glass .app-shell > .main-dock::before { background: linear-gradient(110deg,#f0f8ff,#fff 51%,#f6f1ff); border-color: #cbd3e3; }
-.app-shell > .main-dock button {
+.glass .fitness-viewport > .main-dock::before { background: linear-gradient(110deg,#f0f8ff,#fff 51%,#f6f1ff); border-color: #cbd3e3; }
+.fitness-viewport > .main-dock button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -73,15 +90,15 @@
   line-height: 1.15;
   font-weight: 550;
 }
-.app-shell > .main-dock button:hover,
-.app-shell > .main-dock button[aria-current="page"] { color: var(--bar-active); background: transparent; }
-.app-shell > .main-dock button[aria-current="page"] { font-weight: 750; }
+.fitness-viewport > .main-dock button:hover,
+.fitness-viewport > .main-dock button[aria-current="page"] { color: var(--bar-active); background: transparent; }
+.fitness-viewport > .main-dock button[aria-current="page"] { font-weight: 750; }
 .main-dock .dock-glyph { width: 42px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
 .main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #ffffff23; }
 .glass .main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #dbe6fb; }
-.app-shell > .main-dock svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.fitness-viewport > .main-dock svg { width: 20px; height: 20px; stroke-width: 1.8; }
 .main-dock .dock-label { white-space: nowrap; }
-.app-shell > .main-dock .dock-home { justify-content: flex-end; padding-bottom: 8px; }
+.fitness-viewport > .main-dock .dock-home { justify-content: flex-end; padding-bottom: 8px; }
 .main-dock .dock-home .dock-glyph {
   position: absolute;
   top: -25px;
@@ -97,8 +114,31 @@
 }
 .main-dock .dock-home[aria-current="page"] .dock-glyph { background: #d4e6bd; border-color: #afc69c; }
 .glass .main-dock .dock-home[aria-current="page"] .dock-glyph { background: linear-gradient(145deg,#d7eeff,#ebe1ff); border-color: #b1bede; }
-.app-shell > .main-dock .dock-home svg { width: 25px; height: 25px; stroke-width: 2; }
-.app-shell > .main-dock button:focus-visible { outline: 2px solid var(--bar-active); outline-offset: -2px; }
-.app-shell:has(> .main-dock) { padding-bottom: calc(118px + env(safe-area-inset-bottom,0px)); }
-html:has(.main-dock) { scroll-padding-bottom: calc(118px + env(safe-area-inset-bottom,0px)); }
-html:has(.main-dock[hidden]) { scroll-padding-bottom: 16px; }
+.fitness-viewport > .main-dock .dock-home svg { width: 25px; height: 25px; stroke-width: 2; }
+.fitness-viewport > .main-dock button:focus-visible { outline: 2px solid var(--bar-active); outline-offset: -2px; }
+
+/* A soft ring around Home. Only this small layer moves; the button stays still. */
+@supports ((mask-image: radial-gradient(black, transparent)) or (-webkit-mask-image: radial-gradient(black, transparent))) {
+  .main-dock .dock-home .dock-glyph::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: conic-gradient(from 26deg, #76c9ff, #a19af6, #f595ca, #ffbd89, #7cd9ce, #76c9ff);
+    --aura-ring: radial-gradient(circle closest-side, transparent calc(100% - 9px), #000 calc(100% - 7px), #0008 calc(100% - 5px), transparent 100%);
+    -webkit-mask-image: var(--aura-ring);
+    mask-image: var(--aura-ring);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .main-dock:not([data-economize]) .dock-home .dock-glyph::before { animation: home-aura 10s linear infinite; }
+  }
+  @media (prefers-reduced-data: reduce), (update: slow), (forced-colors: active) {
+    .main-dock .dock-home .dock-glyph::before { content: none; animation: none; }
+  }
+}
+@keyframes home-aura {
+  0% { transform: rotate(0turn); }
+  50% { transform: rotate(.5turn) scale(1.035); }
+  100% { transform: rotate(1turn); }
+}

@@ -208,7 +208,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   },[onDirtyChange])
   const saved=account.values[`training:${date}`],hasPlan=trainingEntryValid(`training:${date}`,saved)
   const selected=workoutForDate(date,hasPlan?saved:undefined)
-  useEffect(()=>{window.scrollTo(0,0)},[editing,reader?.date,reader?.index])
+  useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[editing,reader?.date,reader?.index])
   function closeGuide(destination:'summary'|'registration') {
     setReader(null)
     requestAnimationFrame(()=>{

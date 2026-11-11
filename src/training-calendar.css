@@ -8,7 +8,7 @@
 .training-calendar-date label { flex: 1; min-width: 0; margin: 0; }
 .training-calendar-date input { min-width: 0; max-width: 100%; }
 .training-calendar-date > button { min-height: 48px; }
-.training-calendar-weekdays, .training-calendar-grid { display: grid; grid-template-columns: repeat(7,minmax(44px,1fr)); gap: 4px; }
+.training-calendar-weekdays, .training-calendar-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px; }
 .training-calendar-weekdays { margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 700; text-align: center; }
 .training-calendar-day { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 54px; padding: 5px 0 2px; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--text); font-size: 14px; font-weight: 650; }
 .training-calendar-day.is-today { border-color: var(--line); }

@@ -23,9 +23,6 @@
 .exercise-details-copy>h3:first-child{margin-top:0}
 .exercise-details :focus-visible,.guided-prescription :focus-visible{outline:3px solid var(--olive);outline-offset:2px}
 .app-shell :where(input,select,textarea,summary,button):focus-visible{scroll-margin-block:12px 100px}
-@media (max-height:540px) and (pointer:coarse){
-  .app-shell:has(:is(input,textarea,select):focus) .bottom-nav{position:static;transform:none;margin:20px auto 0}
-}
 
 .workspace--training .session-focus-heading{padding:14px 16px}
 .session-focus-heading .text-button{min-height:44px;margin:0 0 2px}

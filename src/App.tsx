@@ -31,13 +31,13 @@ function Workspace(){
   useEffect(()=>{setBarSetup(initialBarSetup())},[account.session?.user.id])
   const [navigation,setNavigation]=useState(()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
   const [homeVisit,setHomeVisit]=useState(0)
-  const [keyboardOpen,setKeyboardOpen]=useState(false)
+  const [keyboardHeight,setKeyboardHeight]=useState<number>()
   useEffect(()=>{
     const viewport=window.visualViewport
     if(!viewport)return
     const update=()=>{
       const editing=document.activeElement?.matches('input, textarea, [contenteditable=true]')
-      setKeyboardOpen(Boolean(editing && window.innerHeight-viewport.height>120))
+      setKeyboardHeight(editing && viewport.scale===1 && window.innerHeight-viewport.height>120 ? viewport.height : undefined)
     }
     viewport.addEventListener('resize',update)
     document.addEventListener('focusin',update)
@@ -56,6 +56,15 @@ function Workspace(){
   const [ready,setReady]=useState(false)
   const [loadError,setLoadError]=useState(false)
   const [online,setOnline]=useState(navigator.onLine)
+  const [limitedData,setLimitedData]=useState(false)
+  useEffect(()=>{
+    const network=(navigator as Navigator & {connection?:EventTarget & {saveData?:boolean;effectiveType?:string}}).connection
+    if(!network)return
+    const update=()=>setLimitedData(Boolean(network.saveData || ['slow-2g','2g','3g'].includes(network.effectiveType??'')))
+    update()
+    network.addEventListener('change',update)
+    return ()=>network.removeEventListener('change',update)
+  },[])
   const [toast,notify]=useState('')
   const [trainingDirty,setTrainingDirty]=useState(false)
   const [progressIntent,setProgressIntent]=useState<'strength'>()
@@ -96,7 +105,7 @@ function Workspace(){
     document.documentElement.dataset.theme=theme
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='glass'?'#ffffff':theme==='dark'?'#18221e':'#f8f6f1')
   },[theme])
-  useEffect(()=>{window.scrollTo(0,0)},[navigation.section])
+  useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[navigation.section])
   useEffect(()=>{
     const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day&&!trainingDirty)setNavigation(v=>({...v,day,section:'home',trainingDate:day,nutritionDate:day}))}
     const dayTick=window.setInterval(sync,30000)
@@ -132,7 +141,8 @@ function Workspace(){
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
   const section=legacyCalc?'nutrition':navigation.section
   const cacheMessage=cacheReady?'Guía disponible sin conexión':cacheError||!('serviceWorker' in navigator)?'Guía disponible con conexión':'Preparando la guía para usarla sin conexión…'
-  return <div className="app-shell">
+  return <div className="fitness-viewport" style={keyboardHeight ? {height:keyboardHeight} : undefined}>
+    <div id="fitness-scroll"><div className="app-shell">
     {serviceNotice}
     <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Inicio',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
@@ -145,8 +155,10 @@ function Workspace(){
       {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>{if(tab==='calc')go('nutrition',undefined,'calc');else setNavigation(v=>({...v,tab}))}} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
+    </div></div>
     {toast&&<div className="toast" role="status">{toast}</div>}
-    <nav className="bottom-nav main-dock" aria-label="Navegación principal" hidden={keyboardOpen}>
+    <nav className="bottom-nav main-dock" aria-label="Navegación principal" hidden={keyboardHeight!==undefined}
+      data-economize={!online||limitedData||undefined}>
       {([
         ['training','Entrenos',Dumbbell], ['progress','Progreso',TrendingUp],
         ['home','Inicio',Home],
@@ -159,7 +171,7 @@ function Workspace(){
             if(id==='home'){
               if(reader)setReader(null)
               setHomeVisit(previous=>previous+1)
-              window.scrollTo(0,0)
+              document.getElementById('fitness-scroll')?.scrollTo(0,0)
             }
           }}>
           <span className="dock-glyph"><Icon aria-hidden="true"/></span>
