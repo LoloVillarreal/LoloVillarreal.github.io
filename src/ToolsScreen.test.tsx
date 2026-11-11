@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import ToolsScreen from './ToolsScreen'
+import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
 
 function Tools() {
   const [tool, setTool] = useState('')
-  return <ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()}/>
+  const [setup,setSetup]=useState(initialBarSetup)
+  return <ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator setup={setup} setSetup={setSetup}/>}/>
 }
 
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
@@ -23,6 +25,46 @@ it('cambia el sentido de conversión y devuelve el foco a la herramienta al sali
   expect(screen.getByRole('status').textContent).toBe('45,36 kg')
   fireEvent.click(screen.getByRole('button', {name:'Todas las herramientas'}))
   expect(document.activeElement).toBe(screen.getByRole('button', {name:/Conversor kg/}))
+})
+
+it('suma y quita pares conservando el montaje al cambiar de barra o visitar otra herramienta',()=>{
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new Event('close'))}
+  render(<Tools/>)
+  fireEvent.click(screen.getByRole('button',{name:/Barra y discos/}))
+  const total=()=>screen.getByLabelText('Peso total').textContent
+  expect(total()).toBe('20 kg')
+  fireEvent.click(screen.getByRole('button',{name:'Añadir dos discos de 10 kg'}))
+  fireEvent.click(screen.getByRole('button',{name:'Añadir dos discos de 1,25 kg'}))
+  expect(total()).toBe('42,5 kg')
+  fireEvent.click(screen.getByRole('button',{name:/Elegir barra/}))
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:/Curva Z/}))
+  expect(total()).toBe('34,5 kg')
+  fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
+  fireEvent.click(screen.getByRole('button',{name:/Conversor kg/}))
+  fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
+  fireEvent.click(screen.getByRole('button',{name:/Barra y discos/}))
+  fireEvent.click(screen.getByRole('button',{name:'Quitar dos discos de 1,25 kg'}))
+  expect(total()).toBe('32 kg')
+  expect(screen.queryByRole('button',{name:'Quitar dos discos de 1,25 kg'})).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button',{name:'Añadir dos discos de 1,25 kg'}))
+})
+
+it('pide el peso de la Smith y solo coloca el peso objetivo realizable al confirmarlo',()=>{
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
+  render(<Tools/>)
+  fireEvent.click(screen.getByRole('button',{name:/Barra y discos/}))
+  fireEvent.click(screen.getByRole('button',{name:/Elegir barra/}))
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:/Multipower/}))
+  expect(screen.getByLabelText('Peso total').textContent).toBe('— kg')
+  fireEvent.change(screen.getByLabelText('Peso de la barra (kg)'),{target:{value:'7,5'}})
+  fireEvent.click(screen.getByText('Calcular por peso objetivo'))
+  fireEvent.change(screen.getByLabelText('Peso objetivo (kg)'),{target:{value:'30,5'}})
+  expect(screen.getByText(/Faltarían 0,5 kg/)).toBeTruthy()
+  expect(screen.getByLabelText('Peso total').textContent).toBe('7,5 kg')
+  fireEvent.click(screen.getByRole('button',{name:'Colocar 30 kg'}))
+  expect(screen.getByLabelText('Peso total').textContent).toBe('30 kg')
 })
 
 it('abre una ficha pulsando su nombre y mantiene la búsqueda al volver', () => {

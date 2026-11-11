@@ -10,6 +10,7 @@ import { backupJson, download } from './lib/files'
 import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
 import ToolsScreen from './ToolsScreen'
+import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
 import SectionSwitch from './SectionSwitch'
 import './access.css'
 import './main-dock.css'
@@ -26,6 +27,8 @@ function Workspace(){
   useEffect(()=>{const change=()=>setRoute(location.hash);window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
+  const [barSetup,setBarSetup]=useState(initialBarSetup)
+  useEffect(()=>{setBarSetup(initialBarSetup())},[account.session?.user.id])
   const [navigation,setNavigation]=useState(()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
   const [homeVisit,setHomeVisit]=useState(0)
   const [keyboardOpen,setKeyboardOpen]=useState(false)
@@ -136,7 +139,9 @@ function Workspace(){
     <main className={`workspace workspace--${section}`}>
       {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
-      {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''} setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}
+      {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''}
+        barCalculator={<BarbellCalculator setup={barSetup} setSetup={setBarSetup}/>}
+        setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}
       {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>{if(tab==='calc')go('nutrition',undefined,'calc');else setNavigation(v=>({...v,tab}))}} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
