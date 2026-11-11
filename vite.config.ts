@@ -50,7 +50,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom'],
-          charts: ['recharts'],
           icons: ['lucide-react'],
           storage: ['idb'],
         },

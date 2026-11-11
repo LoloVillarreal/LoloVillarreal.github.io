@@ -1,3 +1,4 @@
+import { guideById } from './exercise-guides'
 import type { Exercise } from '../types'
 const guides:[RegExp,string,string?][]=[
  [/^Arnold Press/i,'Empieza con mancuernas delante de los hombros y palmas hacia ti. Empuja hacia arriba girando las palmas hacia delante; baja despacio invirtiendo el giro. Mantén el tronco estable.','https://www.hevyapp.com/exercises/arnold-press-dumbbell/'],
@@ -21,6 +22,8 @@ const guides:[RegExp,string,string?][]=[
 ]
 export function techniqueFor(exercise:Exercise){
  if(!exercise.id.startsWith('hevy-'))return {text:exercise.technique,general:false,source:undefined}
+ const guide = guideById.get(exercise.hevyId)
+ if (guide) return {text:guide.instruction, general:false, source:guide.source}
  const match=guides.find(([pattern])=>pattern.test(exercise.hevyName))
  return match?{text:match[1],general:true,source:match[2]}:{text:exercise.technique,general:false,source:undefined}
 }
