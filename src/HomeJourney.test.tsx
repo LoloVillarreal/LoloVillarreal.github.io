@@ -61,7 +61,7 @@ it('después de entrenar, Inicio ofrece ver el registro y preparar fuerza otro d
   expect(screen.queryByRole('heading',{name:'¿Qué quieres hacer hoy?'})).toBeNull()
   fireEvent.click(screen.getByRole('button',{name:'Ver mi registro'}))
   expect(go).toHaveBeenLastCalledWith('training',wednesday)
-  fireEvent.click(screen.getByRole('button',{name:'Elegir entrenamiento del jueves'}))
+  fireEvent.click(screen.getByRole('button',{name:/Fuerza otro día.*jueves/i}))
   expect(go).toHaveBeenLastCalledWith('training','2026-11-12')
   fireEvent.click(screen.getByRole('button',{name:/lunes, 9 de noviembre, sin registro/i}))
   expect(go).toHaveBeenLastCalledWith('training','2026-11-09')
@@ -71,23 +71,27 @@ it('propone una fecha de fuerza disponible sin desplazar un descanso guardado',(
   const go=vi.fn()
   account.values['training:2026-11-12']=planFromRoutine(workoutDays.find(day=>day.type==='recovery')!)
   render(<HomeScreen go={go} reader={null} startTraining={vi.fn()} onStrength={vi.fn()}/>)
-  fireEvent.click(screen.getByRole('button',{name:'Elegir entrenamiento del viernes'}))
+  fireEvent.click(screen.getByRole('button',{name:/Fuerza otro día.*viernes/i}))
   expect(go).toHaveBeenCalledWith('training','2026-11-13')
   expect(account.set).not.toHaveBeenCalled()
 })
-it.each(['Inicio','Entrenos'])('mantiene el foco al abrir y cancelar un cambio de rutina desde %s',async origin=>{
+it.each(['Inicio','Entrenos'])('ofrece elegir antes del plan guardado y conserva el plan al cancelar desde %s',async origin=>{
   const key='training:'+wednesday
   const original=planFromRoutine(workoutDays.find(day=>day.type==='cardio')!)
   account.values[key]=original
   render(origin==='Inicio'
     ?<HomeScreen go={vi.fn()} reader={null} startTraining={vi.fn()} onStrength={vi.fn()}/>
     :<TrainingScreen date={wednesday} setDate={vi.fn()} notify={vi.fn()} reader={null} bookmark={null} setReader={vi.fn()} finish={vi.fn()} onDirtyChange={vi.fn()}/>)
-  const opener=screen.getByRole('button',{name:'Cambiar mi elección'})
+  const opener=screen.getByRole('button',{name:'Cardio'})
+  const savedStart=screen.getByRole('button',{name:'Empezar cardio'})
+  expect(opener.compareDocumentPosition(savedStart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.queryByRole('button',{name:'Fuerza'})).toBeNull()
   opener.focus()
   fireEvent.click(opener)
-  expect(document.activeElement).toBe(screen.getByRole('heading',{name:'¿Qué quieres hacer hoy?'}))
+  expect(document.activeElement).toBe(screen.getByRole('heading',{name:'Prepara tu cardio'}))
+  fireEvent.click(screen.getByRole('button',{name:'Caminata'}))
   fireEvent.click(screen.getByRole('button',{name:'Cancelar cambio'}))
-  await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('button',{name:'Cambiar mi elección'})))
+  await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('button',{name:'Cardio'})))
   expect(account.values[key]).toBe(original)
   expect(account.set).not.toHaveBeenCalled()
 })

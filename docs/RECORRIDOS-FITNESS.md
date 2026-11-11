@@ -2,7 +2,7 @@
 
 | Si quieres… | Empieza aquí |
 | --- | --- |
-| Entrenar hoy | En **Inicio**, elige el tipo de actividad. En fuerza puedes ver los ejercicios y tocar una foto para consultar la técnica antes de decidir. **Guardar y empezar** abre la guía; **Guardar mi elección** deja la sesión preparada. |
+| Entrenar hoy | En **Inicio** o **Entrenos**, elige tu actividad. Toca **Fuerza → Elegir mis ejercicios** para montar una sesión desde cero, o escoge una plantilla en **Rutinas del plan**. Para empezar lo que ya habías elegido, pulsa **Empezar** en **Tu plan guardado**. |
 | Preparar otro día | Toca su fecha en la semana de Inicio. Para fechas más lejanas, abre **Entrenos → Ver mes completo**. Planificar no suma un día entrenado: el registro se confirma por separado. El miércoles admite cardio o descanso y el viernes es opcional. |
 | Cambiar de ejercicio en plena sesión | Toca **Ejercicios** en la parte superior y selecciona una ficha. Puedes saltar o volver atrás sin cambiar el orden de la rutina ni registrar asistencia. |
 | Ver cómo avanzar | Abre **Ver plan de 12 semanas** desde Inicio o desde el resumen de tu rutina. Toca una semana para leer el objetivo; solo cambia tu semana actual si pulsas **Seguir la semana**. |

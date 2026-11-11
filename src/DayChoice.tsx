@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Activity, ArrowLeft, Check, ChevronRight, Dumbbell, Leaf, Play } from 'lucide-react'
+import { Activity, ArrowLeft, Check, ChevronRight, Dumbbell, Leaf, ListPlus, Play } from 'lucide-react'
 import { workoutDays } from './data/training'
 import { useAccount } from './lib/account'
 import { isoDate, parseDate } from './lib/dates'
@@ -14,6 +14,7 @@ import { TrainingPlanner } from './TrainingPlanner'
 const noDirtyChange = () => {}
 type DayChoiceProps = {
   date: string
+  initialKind?: TrainingPlan['type']
   onBegin: () => void
   onSaved: (start: boolean) => void
   returnToRecord?: boolean
@@ -21,9 +22,30 @@ type DayChoiceProps = {
   onCancel?: () => void
   onDirtyChange?: (dirty: boolean) => void
 }
-export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRecord=false,onDirtyChange=noDirtyChange}:DayChoiceProps) {
+export function ActivityMenu({date,onChoose}:{date:string;onChoose:(kind:TrainingPlan['type'])=>void}) {
+  const weekday=parseDate(date).getDay()
+  return <>
+    {weekday===3 && <p>Los miércoles puedes hacer cardio o descansar.</p>}
+    {weekday===5 && <p>Entrenar el viernes es opcional.</p>}
+    <div className="choice-menu" role="group" aria-label="Tipo de actividad">
+      {([
+        ['strength','Fuerza','Escoge tus ejercicios',Dumbbell],
+        ['cardio','Cardio','Elige la actividad y el tiempo',Activity],
+        ['recovery','Descanso','Deja el día para recuperar',Leaf]
+      ] as const).filter(([type])=>weekday!==3||type!=='strength').map(([type,label,description,Icon])=>
+        <button type="button" key={type} id={'choose-activity-'+type} className={'choice-menu-row choice-menu-'+type}
+          aria-label={label} onClick={()=>onChoose(type)}>
+          <span className="choice-menu-icon"><Icon size={22} aria-hidden="true"/></span>
+          <span className="choice-menu-copy"><strong>{label}</strong><small>{description}</small></span>
+          <ChevronRight size={17} aria-hidden="true"/>
+        </button>
+      )}
+    </div>
+  </>
+}
+export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPlan,returnToRecord=false,onDirtyChange=noDirtyChange}:DayChoiceProps) {
   const account=useAccount()
-  const [kind,setKind]=useState<TrainingPlan['type']>()
+  const [kind,setKind]=useState(initialKind)
   const [routineDay,setRoutineDay]=useState<number>()
   const [activity,setActivity]=useState(''),[minutes,setMinutes]=useState('')
   const [preview,setPreview]=useState(false)
@@ -39,7 +61,7 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
   const startAfterSave=useRef(false)
   const sending=useRef(false),alive=useRef(true),written=useRef(false)
   const [online,setOnline]=useState(navigator.onLine)
-  const weekday=parseDate(date).getDay(),key='training:'+date
+  const key='training:'+date
   useEffect(()=>{
     if(previous.current||returnToRecord)heading.current?.focus()
   },[returnToRecord])
@@ -100,7 +122,7 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
       if(alive.current)setBusy(false)
     }
   }
-  if(custom)return <TrainingPlanner date={date} initial={{...planFromRoutine(workoutDays[0]),title:'Mi rutina',exercises:[]}}
+  if(custom)return <TrainingPlanner date={date} newRoutine={{previous:previous.current,allowStart:!returnToRecord}} initial={{...planFromRoutine(workoutDays[0]),title:'Mi rutina',exercises:[]}}
     onDirtyChange={setCustomDirty} onCancel={()=>{
       setCustom(false)
       requestAnimationFrame(()=>customButton.current?.focus())
@@ -111,30 +133,15 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
       onClick={()=>{setKind(undefined);setPreview(false);setError('');requestAnimationFrame(()=>heading.current?.focus({preventScroll:true}))}}>
       <ArrowLeft size={16}/>Cambiar tipo de actividad
     </button>}
-    <h2 tabIndex={-1} ref={heading}>{kind==='cardio'?'Prepara tu cardio':kind==='strength'?'¿Qué rutina quieres hacer?':kind==='recovery'?'Día de descanso':date===isoDate()?'¿Qué quieres hacer hoy?':'¿Qué quieres hacer este día?'}</h2>
-    {!kind&&<>
-      {weekday===3 && <p>Los miércoles son de recuperación. Puedes elegir fuerza en otra fecha.</p>}
-      {weekday===5 && <p>Entrenar el viernes es opcional.</p>}
-      <div className="choice-menu" role="group" aria-label="Tipo de actividad">
-        {([
-          ['strength','Fuerza','Elige una rutina o crea la tuya',Dumbbell],
-          ['cardio','Cardio','Camina, corre o pedalea',Activity],
-          ['recovery','Descanso','Reserva el día para recuperar',Leaf]
-        ] as const).filter(([type])=>weekday!==3||type!=='strength').map(([type,label,description,Icon])=>
-          <button type="button" key={type} className={'choice-menu-row choice-menu-'+type} aria-label={label}
-            onClick={()=>choose(type)}>
-            <span className="choice-menu-icon"><Icon size={22} aria-hidden="true"/></span>
-            <span className="choice-menu-copy"><strong>{label}</strong><small>{description}</small></span>
-            <ChevronRight size={17} aria-hidden="true"/>
-          </button>
-        )}
-      </div>
-    </>}
-    {kind==='strength'&&<div className="day-choice-options" role="group" aria-label="Elige tu rutina">
-
+    <h2 tabIndex={-1} ref={heading}>{kind==='cardio'?'Prepara tu cardio':kind==='strength'?'Prepara tu sesión de fuerza':kind==='recovery'?'Día de descanso':date===isoDate()?'¿Qué quieres hacer hoy?':'¿Qué quieres hacer este día?'}</h2>
+    {!kind&&<ActivityMenu date={date} onChoose={choose}/>}
+    {kind==='strength'&&<div className="day-choice-options strength-choice" role="group" aria-label="Elige tu rutina">
+      <button type="button" ref={customButton} className="primary strength-choice-create" disabled={busy||written.current} onClick={()=>setCustom(true)}>
+        <ListPlus size={22} aria-hidden="true"/><span>Elegir mis ejercicios</span><ChevronRight size={18} aria-hidden="true"/>
+      </button>
+      <h3>Rutinas del plan</h3>
       {workoutDays.filter(day=>day.type==='strength').map(day=><button key={day.day} disabled={busy||written.current}
         className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>setRoutineDay(day.day)}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
-      <button ref={customButton} className="text-button" disabled={busy||written.current} onClick={()=>setCustom(true)}>Crear mi propia rutina</button>
     </div>}
     {kind==='cardio'&&<CardioPicker activity={activity} minutes={minutes} disabled={busy||written.current}
       onActivity={setActivity} onMinutes={setMinutes}/>}

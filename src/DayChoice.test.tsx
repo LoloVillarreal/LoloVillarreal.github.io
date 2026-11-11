@@ -16,6 +16,8 @@ vi.mock('./lib/account',()=>({
 }))
 beforeEach(()=>{
   account.values={}
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
   vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
   account.set.mockReset().mockImplementation((key:string,update:unknown)=>{account.values[key]=typeof update==='function'?update(account.values[key]):update})
   account.flush.mockReset().mockResolvedValue(undefined)
@@ -111,18 +113,46 @@ it('al cancelar la creación conserva la rutina, la vista previa y el foco de re
   fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
   fireEvent.click(screen.getByRole('button',{name:/Glúteos y femorales/}))
   fireEvent.click(screen.getByRole('button',{name:/Ver los .* ejercicios/}))
-  fireEvent.click(screen.getByRole('button',{name:'Crear mi propia rutina'}))
+  fireEvent.click(screen.getByRole('button',{name:'Elegir mis ejercicios'}))
+  fireEvent.click(screen.getByRole('button',{name:'Cerrar biblioteca'}))
   const reload=new Event('beforeunload',{cancelable:true})
   window.dispatchEvent(reload)
   expect(reload.defaultPrevented).toBe(true)
   const close=screen.getByRole('button',{name:'Cerrar'})
   close.focus()
   fireEvent.click(close)
-  const create=screen.getByRole('button',{name:'Crear mi propia rutina'})
+  const create=screen.getByRole('button',{name:'Elegir mis ejercicios'})
   await waitFor(()=>expect(document.activeElement).toBe(create))
   expect(screen.getByRole('button',{name:/Glúteos y femorales/,pressed:true})).toBeTruthy()
   expect(screen.getByRole('region',{name:'Guía temporal'})).toBeTruthy()
   expect(account.set).not.toHaveBeenCalled()
+})
+
+it('crea fuerza con los ejercicios elegidos y empieza solo al confirmar',async()=>{
+  vi.setSystemTime(new Date('2026-11-12T12:00:00'))
+  const saved=vi.fn()
+  try {
+    mount('2026-11-12',saved)
+    fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
+    fireEvent.click(screen.getByRole('button',{name:'Elegir mis ejercicios'}))
+    expect(screen.getByRole('dialog',{name:'Elegir ejercicios'})).toBeTruthy()
+    expect(screen.getByText('0 ejercicios en tu rutina')).toBeTruthy()
+    fireEvent.change(screen.getByRole('searchbox',{name:'Buscar ejercicio'}),{target:{value:'Hip thrust'}})
+    const add=screen.getAllByRole('button',{name:/^Añadir Hip thrust/i})[0]
+    fireEvent.click(add)
+    expect(screen.getByText('1 ejercicio en tu rutina')).toBeTruthy()
+    fireEvent.click(add)
+    expect(screen.getByText('0 ejercicios en tu rutina')).toBeTruthy()
+    fireEvent.click(add)
+    fireEvent.click(screen.getByRole('button',{name:'Ver mi rutina'}))
+    expect(account.set).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button',{name:'Guardar y empezar'}))
+    await waitFor(()=>expect(saved).toHaveBeenCalledWith(true))
+    const plan=account.values['training:2026-11-12'] as TrainingPlan
+    expect(plan.type).toBe('strength')
+    expect(plan.exercises).toHaveLength(1)
+    expect(account.set).toHaveBeenCalledOnce()
+  } finally {vi.useRealTimers()}
 })
 
 it('protege una elección sin guardar al recargar y deja salir después de volver o desmontar',()=>{

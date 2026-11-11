@@ -17,7 +17,7 @@ import { attendanceEntryValid } from './lib/attendance'
 import TodayReplacement from './TodayReplacement'
 import { TrainingPlanner } from './TrainingPlanner'
 import { LoveNote } from './LoveNote'
-import { DayChoice } from './DayChoice'
+import { ActivityMenu, DayChoice } from './DayChoice'
 import { planFromRoutine, trainingEntryValid, workoutForDate, type TrainingPlan } from './lib/training-plan'
 import { currentTheme, themes } from './lib/appearance'
 import { RestTimer } from './RestTimer'
@@ -37,11 +37,30 @@ const failure='No se ha podido guardar. Tus cambios siguen en pantalla; reintent
 function Metric({label,value,sub}:{label:string;value:string;sub:string}){return <article className="metric"><p>{label}</p><strong>{value}</strong><small>{sub}</small></article>}
 function Empty({text}:{text:string}){return <p className="empty">{text}</p>}
 
+function SavedDayChoice({date,plan,onChoose,onStart,onDetails,edit=false}:{
+  date:string;plan:TrainingPlan;onChoose:(kind:TrainingPlan['type'])=>void;onStart:()=>void;onDetails:()=>void;edit?:boolean
+}){
+  const action=plan.type==='recovery'?'Ver descanso':plan.type==='cardio'?'Empezar cardio':'Empezar entrenamiento'
+  return <section className={'card day-choice saved-day-choice'+(edit?' training-overview':'')} tabIndex={-1}>
+    <p className="day-date">{dateLabel(date)}</p>
+    <h2>{date===isoDate()?'¿Qué quieres hacer hoy?':'¿Qué quieres hacer este día?'}</h2>
+    <ActivityMenu date={date} onChoose={onChoose}/>
+    <div className="saved-day-shortcut">
+      <div><small>Tu plan guardado</small><strong>{plan.title}</strong></div>
+      <button className="secondary" disabled={plan.type==='strength'&&!plan.exercises.length} aria-label={action} onClick={onStart}>
+        <Play size={15} aria-hidden="true"/>{plan.type==='recovery'?'Ver guía':'Empezar'}
+      </button>
+    </div>
+    <button className="text-button saved-day-details" onClick={onDetails}>{edit?'Editar detalles':'Ver el plan de hoy'}<ChevronRight size={14} aria-hidden="true"/></button>
+  </section>
+}
+
 export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onSelectionSaved}:{onSelectionSaved?:()=>void;onDirtyChange?:(dirty:boolean)=>void;onStrength:()=>void;go:(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>void;reader:{date:string;index:number}|null;startTraining:(date:string,index?:number)=>void}){
   const account=useAccount(),today=isoDate(),saved=account.values[`training:${today}`]
   const hasPlan=trainingEntryValid(`training:${today}`,saved)
   const [pickingDate,setPickingDate]=useState(''),[startChosen,setStartChosen]=useState(false)
   const choiceTrigger=useRef<HTMLButtonElement>(null)
+  const initialKind=useRef<TrainingPlan['type']>()
   const day=workoutForDate(today,hasPlan?saved:undefined)
   useEffect(()=>{
     if(startChosen&&hasPlan){setStartChosen(false);startTraining(today,0)}
@@ -53,10 +72,8 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
     !trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date])
   const resumeToday = reader?.date === today && !trainedToday
   const resumeIndex = resumeToday ? Math.min(reader.index, Math.max(0, day.exercises.length - 1)) : 0
-  const guideLabel = resumeToday && day.exercises.length
-    ? `Continuar · ejercicio ${resumeIndex + 1} de ${day.exercises.length}`
-    : resumeToday ? 'Continuar sesión' : trainedToday ? 'Volver a ver los ejercicios'
-    : day.type === 'strength' ? 'Empezar entrenamiento' : day.type === 'cardio' ? 'Empezar cardio' : 'Ver descanso de hoy'
+  const guideLabel = day.exercises.length
+    ? `Continuar · ejercicio ${resumeIndex + 1} de ${day.exercises.length}` : 'Continuar sesión'
   const weekStrip = weekDates(today).map(date => ({
     date, trained: date <= today && attendanceEntryValid('attendance:' + date, account.values['attendance:' + date])
   }))
@@ -91,34 +108,32 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
           {attendance.type==='strength' && <button className="text-button" onClick={onStrength}>Anotar marca de hip thrust</button>}
         </div>
       </section> : !hasPlan || pickingDate===today ? <>
-        <DayChoice key={today} date={today} previousPlan={hasPlan?saved:undefined} onCancel={()=>{
+        <DayChoice key={today} date={today} initialKind={hasPlan&&pickingDate===today?initialKind.current:undefined} previousPlan={hasPlan?saved:undefined} onCancel={()=>{
           setPickingDate('')
-          requestAnimationFrame(()=>choiceTrigger.current?.focus())
+          requestAnimationFrame(()=>(choiceTrigger.current??document.getElementById('choose-activity-'+initialKind.current))?.focus())
         }} onDirtyChange={onDirtyChange} onBegin={()=>setPickingDate(today)}
           onSaved={start=>{onSelectionSaved?.();setPickingDate('');onDirtyChange?.(false);setStartChosen(start)}}/>
-      </> : <section className="card home-today simple-day-intro">
+      </> : !resumeToday ? <SavedDayChoice date={today} plan={saved} onChoose={kind=>{initialKind.current=kind;setPickingDate(today)}}
+        onStart={()=>startTraining(today,0)} onDetails={()=>go('training',today)}/>
+      : <section className="card home-today simple-day-intro">
       <p className="day-date">{dateLabel(today)}</p>
       <h2>{day.title}</h2>
-      {trainedToday && <p className="day-confirmation" role="status">✓ Entrenamiento registrado</p>}
       <p>{daySummary}{day.optional ? ' · Opcional' : ''}</p>
       <div className="home-actions">
         <button className="primary full" disabled={account.loading || (day.type === 'strength' && !day.exercises.length)}
           onClick={() => startTraining(today,resumeIndex)}><Play size={17}/>{guideLabel}</button>
-        <button ref={choiceTrigger} className="text-button" onClick={()=>setPickingDate(today)}>Cambiar mi elección</button>
+        <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(today)}}>Cambiar mi elección</button>
         <button className="text-button" onClick={() => go('training',today)}>Ver el plan de hoy<ChevronRight size={16}/></button>
-        {trainedToday && <button className="text-button" onClick={onStrength}>Anotar mi marca de hip thrust<ChevronRight size={16}/></button>}
       </div>
     </section> }
     {reader && reader.date !== today && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
       Continuar la sesión del {shortDate(reader.date)}<ChevronRight size={16}/>
     </button>}
-    {showNext && <section className="card next-workout-card">
-      <div className="next-workout-label"><Dumbbell size={19} aria-hidden="true"/><span>¿Prefieres hacer fuerza?</span></div>
-      <h2>{dateLabel(nextDate)}</h2>
-      <button className="primary full" onClick={()=>go('training',nextDate)}>
-        {trainingEntryValid('training:'+nextDate,account.values['training:'+nextDate])?'Ver mi rutina de fuerza':`Elegir entrenamiento del ${new Intl.DateTimeFormat('es-ES',{weekday:'long'}).format(parseDate(nextDate))}`}<ChevronRight size={17}/>
-      </button>
-    </section>}
+    {showNext && <button className="next-strength-link" onClick={()=>go('training',nextDate)}>
+      <Dumbbell size={19} aria-hidden="true"/><span><small>Fuerza otro día</small><strong>
+        {dateLabel(nextDate)}
+      </strong></span><ChevronRight size={16} aria-hidden="true"/>
+    </button>}
     <section className="card home-week-card">
       <button className="home-week-open" onClick={()=>go('progress')}><span>
         <strong>Mi progreso</strong><small>{account.loading?'Cargando…':account.error?'Consultar mis registros':`${trainingDays} ${trainingDays===1?'día entrenado':'días entrenados'} esta semana`}</small>
@@ -185,6 +200,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const [recentRegistration,setRecentRegistration]=useState<string|null>(null)
   const [pickingDate,setPickingDate]=useState('')
   const choiceTrigger=useRef<HTMLButtonElement>(null)
+  const initialKind=useRef<TrainingPlan['type']>()
   const choiceDirty=useRef(false)
   const trackChoice=useCallback((dirty:boolean)=>{
     choiceDirty.current=dirty
@@ -232,34 +248,36 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     <section className="card recorded-plan-options">
       <h2>Plan de este día</h2>
       {hasPlan && <button className="secondary full" onClick={()=>setReader({date,index:0})}>Ver la guía de {selected.title}</button>}
-      <button ref={choiceTrigger} className="text-button" onClick={()=>setPickingDate(date)}>{hasPlan?'Cambiar mi elección':'Añadir un plan a este día'}</button>
+      <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(date)}}>{hasPlan?'Cambiar mi elección':'Añadir un plan a este día'}</button>
       {hasPlan && <button className="text-button" onClick={()=>setEditing(true)}>Editar detalles</button>}
     </section>
     {calendar}{(hasPlan||deletedPlan)&&management}
   </>
   if(!hasPlan || pickingDate===date)return <>
     {attendanceControl}
-    <DayChoice key={'choice:'+date} date={date} previousPlan={hasPlan?saved:undefined} returnToRecord={recorded} onCancel={()=>{
+    <DayChoice key={'choice:'+date} date={date} initialKind={hasPlan&&pickingDate===date?initialKind.current:undefined} previousPlan={hasPlan?saved:undefined} returnToRecord={recorded} onCancel={()=>{
       setPickingDate('')
-      requestAnimationFrame(()=>choiceTrigger.current?.focus())
+      requestAnimationFrame(()=>(choiceTrigger.current??document.getElementById('choose-activity-'+initialKind.current))?.focus())
     }} onDirtyChange={trackChoice} onBegin={()=>setPickingDate(date)}
       onSaved={start=>{finish(date);setPickingDate('');onDirtyChange(false);if(start)setReader({date,index:0});notify('Elección guardada en tu cuenta.')}}/>
     {calendar}
     {deletedPlan&&management}
   </>
   return <>
-    <section tabIndex={-1} className="card training-overview simple-day-intro">
+    {bookmark?.date!==date ? <SavedDayChoice date={date} plan={saved} edit onChoose={kind=>{initialKind.current=kind;setPickingDate(date)}}
+      onStart={()=>setReader({date,index:0})} onDetails={()=>setEditing(true)}/>
+    : <section tabIndex={-1} className="card training-overview simple-day-intro">
       <p className="day-date">{dateLabel(date)}</p>
       <h2>{selected.title}</h2>
       <p>{selected.type==='strength' ? `${selected.exercises.length} ejercicios` : selected.objective}{selected.optional?' · Opcional':''}</p>
       <div className="overview-actions">
         <button className="primary" disabled={selected.type==='strength'&&!selected.exercises.length} onClick={()=>setReader({date,index:resume})}>
-          <Play size={17}/>{bookmark?.date===date?'Continuar sesión':selected.type==='strength'?'Empezar entrenamiento':selected.type==='cardio'?'Empezar cardio':'Ver la guía de descanso'}
+          <Play size={17}/>Continuar sesión
         </button>
-        <button ref={choiceTrigger} className="text-button" onClick={()=>setPickingDate(date)}>Cambiar mi elección</button>
+        <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(date)}}>Cambiar mi elección</button>
         <button className="text-button" onClick={()=>setEditing(true)}>Editar detalles</button>
       </div>
-    </section>
+    </section>}
     {attendanceControl}
     {calendar}
     {selected.type==='strength' ? <section className="card routine-preview">
