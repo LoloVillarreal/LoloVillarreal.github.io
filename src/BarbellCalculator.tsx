@@ -79,7 +79,7 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
     </div>
 
     <section className="card bar-stage" aria-label="Tu barra montada">
-      <button ref={trigger} type="button" className="bar-selector" aria-haspopup="dialog" aria-label={'Elegir barra. Actual: '+bar.name}
+      <button ref={trigger} type="button" tabIndex={0} className="bar-selector" aria-haspopup="dialog" aria-label={'Elegir barra. Actual: '+bar.name}
         onClick={()=>{selector.current?.showModal();selector.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()}}>
         <span><small>Barra seleccionada</small><strong>{bar.name}</strong></span><span className="bar-change">Cambiar <ChevronDown size={16}/></span>
       </button>
