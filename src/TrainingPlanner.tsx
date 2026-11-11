@@ -1,11 +1,13 @@
+import { CardioPicker } from './CardioPicker'
+import { cardioLabel } from './lib/cardio-options'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import ExercisePhoto from './ExercisePhoto'
 import './planner-layout.css'
-import { ChevronDown, Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { workoutDays } from './data/training'
 import { useAccount } from './lib/account'
-import { cardioActivities, exerciseLibrary, planFromRoutine, plannedExercise, trainingEntryValid, type PlannedExercise, type TrainingPlan } from './lib/training-plan'
+import { exerciseLibrary, planFromRoutine, plannedExercise, trainingEntryValid, type PlannedExercise, type TrainingPlan } from './lib/training-plan'
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, KeyboardSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import SortableExercise, { ExerciseRowContent } from './SortableExercise'
@@ -84,13 +86,12 @@ export function TrainingPlanner({date,initial,onSaved,onCancel,onDirtyChange}:{d
       </DndContext>
       {libraryOpen&&<LibraryDialog onClose={()=>setLibraryOpen(false)} count={plan.exercises.length}><div className="exercise-library"><label><span><Search size={14}/>Buscar ejercicio</span><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nombre o músculo" autoFocus/></label><div className="library-filters"><label>Grupo muscular<select value={muscle} onChange={e=>setMuscle(e.target.value)}>{['Todos',...new Set(exerciseLibrary.map(exercise=>exercise.muscle))].map(group=><option key={group}>{group}</option>)}</select></label><label>Material<select value={equipment} onChange={e=>setEquipment(e.target.value)}><option value="Todos">Todo el material</option>{Object.entries(equipmentNames).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div><div className="library-results">{visible.map(exercise=><div key={exercise.hevyId} className="library-exercise"><ExercisePhoto exercise={exercise}/><span><strong>{exercise.name}</strong><small>{exercise.muscle}</small></span><button className="text-button" disabled={selectedHevy.includes(exercise.hevyId)||plan.exercises.length>=30} onClick={()=>setPlan(previous=>({...previous,exercises:[...previous.exercises,plannedExercise(exercise)]}))}>{selectedHevy.includes(exercise.hevyId)?'Añadido':'Añadir'}</button></div>)}{visible.length===0&&<p className="empty">No hay coincidencias. Prueba otro nombre o grupo.</p>}</div><p className="small-note">{visible.length} de {exerciseLibrary.length} ejercicios del catálogo estándar de Hevy. Consulta el nombre original en cada ficha.</p></div></LibraryDialog>}
     </>}
-    {plan.type==='cardio'&&<div className="plan-editor-cardio">
-      <label>Actividad de cardio<span className="plan-select"><select value={plan.cardio.activity} onChange={event=>setPlan({...plan,cardio:{...plan.cardio,activity:event.target.value}})}>
-        <option value="" disabled>Elegir actividad</option>
-        {cardioActivities.map(activity=><option key={activity}>{activity}</option>)}
-      </select><ChevronDown size={16} aria-hidden="true"/></span></label>
-      <label>Duración en minutos<input type="number" inputMode="numeric" min="1" max="180" placeholder="De 1 a 180" value={plan.cardio.minutes||''} onChange={event=>setPlan({...plan,cardio:{...plan.cardio,minutes:Number(event.target.value)}})}/></label>
-    </div>}
+    {plan.type==='cardio'&&<CardioPicker key={plan.type} activity={plan.cardio.activity}
+      minutes={plan.cardio.minutes?String(plan.cardio.minutes):''} disabled={busy}
+      onActivity={activity=>setPlan(previous=>({...previous,
+        title:previous.title===previous.cardio.activity||previous.title===cardioLabel(previous.cardio.activity)?cardioLabel(activity):previous.title,
+        cardio:{...previous.cardio,activity}}))}
+      onMinutes={minutes=>setPlan(previous=>({...previous,cardio:{...previous.cardio,minutes:Number(minutes)}}))}/>}
     {plan.type==='recovery'&&<p className="plan-editor-rest">Día de descanso. Puedes añadir una nota para esta fecha.</p>}
     <details className="plan-editor-fold">
       <summary>Notas{plan.notes?' de la sesión':' (opcional)'}</summary>

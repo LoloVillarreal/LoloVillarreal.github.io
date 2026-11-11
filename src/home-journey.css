@@ -1,0 +1,33 @@
+.app-shell .simple-day-home > .card { padding: var(--panel-space); margin: 0; }
+.training-completed-home { background: var(--surface2); }
+.training-completed-home .day-date { margin: 0; font-size: 13px; color: var(--muted); }
+.training-completed-home .day-date::first-letter,.simple-day-home .next-workout-card h2::first-letter { text-transform: uppercase; }
+.completed-headline,.completed-actions,.next-workout-label { display: flex; align-items: center; gap: 12px; }
+.completed-headline { margin: 14px 0; }
+.completed-headline small,.next-workout-label { font-size: 13px; font-weight: 650; color: var(--olive); }
+.completed-headline > div { min-width: 0; }
+.completed-headline h2 { margin: 4px 0 0; overflow-wrap: anywhere; }
+.completed-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: var(--on-accent); background: var(--olive); flex-shrink: 0; }
+.completed-actions { flex-wrap: wrap; gap: 6px; }
+.next-workout-label { gap: 8px; }
+.simple-day-home .next-workout-card h2 { margin: 8px 0 14px; }
+.home-week-open { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:0; min-height:44px; border:0; background:none; color:var(--text); text-align:left; }
+.home-week-open > span { display:grid; gap:4px; }
+.home-week-open strong { font-size:18px; }
+.home-week-open small,.home-week-open svg { color:var(--muted); }
+.home-week-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; list-style:none; margin:14px 0 0; padding:0; }
+.home-week-strip li { display:grid; justify-items:center; gap:4px; font-size:11px; color:var(--muted); }
+.home-week-strip i { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--surface2); }
+.home-week-strip i span { height:3px; width:7px; border-radius:3px; background:var(--muted); }
+.home-week-strip .trained i { color:var(--on-accent); background:var(--olive); }
+.home-week-strip [aria-current=date] i { outline:1px solid var(--olive); outline-offset:2px; }
+.app-shell .workspace .home-secondary-links { padding-block:4px; }
+.recorded-plan-options { display:grid; justify-items:start; gap:6px; }
+.recorded-plan-options button { min-height:44px; }
+.simple-day-register:empty { display:none; }
+.simple-day-home .next-workout-card {
+  background: linear-gradient(125deg, var(--surface) 15%, color-mix(in srgb, var(--sage) 14%, var(--surface)) 100%);
+  border-color: color-mix(in srgb, var(--sage) 44%, var(--line));
+}
+.next-workout-card .primary { justify-content:space-between; text-align:left; }
+.completed-actions .secondary { min-height:44px; }

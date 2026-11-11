@@ -1,0 +1,40 @@
+.cardio-picker { display:grid; gap:16px; margin-block:16px 4px; }
+.cardio-picker fieldset { display:block; min-width:0; margin:0; padding:0; border:none; }
+.cardio-picker legend { padding:0; margin:0 0 9px; font-size:1rem; font-weight:700; color:var(--text); }
+.cardio-activities,.cardio-times { display:grid; gap:8px; }
+.cardio-activities { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.cardio-times { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.cardio-activities button,.cardio-times button,.cardio-results button {
+  display:flex; align-items:center; justify-content:center; gap:6px; min-width:0; min-height:44px; padding:8px;
+  border:1px solid var(--line); border-radius:12px; background:var(--surface2); color:var(--text); font:inherit; font-size:14px; font-weight:600;
+}
+.cardio-activities button { justify-content:flex-start; text-align:left; }
+.cardio-activities button svg { flex-shrink:0; color:var(--olive); }
+.cardio-activities button span { flex:1; overflow-wrap:anywhere; }
+.cardio-picker button[aria-pressed="true"] { border-color:var(--olive); box-shadow:inset 0 0 0 1px var(--olive); }
+.cardio-more { display:flex; align-items:center; gap:6px; min-height:44px; margin:0; padding:7px 1px; border:0; background:transparent; color:var(--olive); font-weight:650; text-align:left; }
+.cardio-search { border:1px solid var(--line); border-radius:14px; padding:8px; }
+.cardio-search label { margin:0; display:flex; flex-direction:row; align-items:center; gap:5px; padding-left:6px; }
+.cardio-search label input { min-width:0; flex:1; width:100%; }
+.cardio-results { max-height:185px; overflow:auto; overscroll-behavior:contain; }
+.cardio-results button { justify-content:space-between; width:100%; background:transparent; border-radius:0; border-width:0 0 1px; }
+.cardio-manual { display:grid; gap:5px; margin:10px 0 0; }
+.cardio-manual input { min-width:0; width:100%; box-sizing:border-box; }
+@media(max-width:360px){.cardio-times{gap:4px}.cardio-times button{font-size:13px;padding-inline:3px}}
+
+.choice-menu { display:grid; gap:7px; margin-top:16px; }
+.choice-menu-row { display:flex; align-items:center; gap:12px; min-width:0; min-height:62px; width:100%; padding:10px 12px;
+  text-align:left; background:var(--surface2); color:var(--text); border:1px solid var(--line); border-radius:15px; }
+.choice-menu-row > svg { flex:none; color:var(--muted); }
+.choice-menu-icon { display:grid; place-items:center; width:37px; height:37px; border-radius:12px; flex:none; color:var(--text); background:var(--surface); }
+.choice-menu-cardio .choice-menu-icon { color:#195953; background:#d8eae3; }
+.choice-menu-strength .choice-menu-icon { color:#714b39; background:#f1e3d8; }
+.choice-menu-recovery .choice-menu-icon { color:#545b32; background:#e7eaca; }
+.choice-menu-copy { flex:1; min-width:0; display:grid; gap:3px; }
+.choice-menu-copy strong { font-size:16px; line-height:1.2; }
+.choice-menu-copy small { font-size:12px; color:var(--muted); line-height:1.35; }
+.choice-type-back { display:inline-flex; align-items:center; gap:5px; min-height:44px; padding:4px 0; background:transparent; border:0; color:var(--olive); }
+.day-choice.card .day-choice-option { justify-content:flex-start; padding:7px 10px; gap:12px; }
+.day-choice-option img { width:40px; height:40px; flex:none; object-fit:contain; background:white; border-radius:9px; }
+.day-choice.card .day-choice-option > span { flex:1; }
+.day-choice.card .day-choice-option small { display:block; margin-top:3px; }

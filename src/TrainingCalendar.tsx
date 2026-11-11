@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, CheckCircle2, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react'
 import { useAccount } from './lib/account'
 import { attendanceEntryValid, type Attendance } from './lib/attendance'
 import { addDays, isoDate, mondayOf, parseDate, shortDate, validDate } from './lib/dates'
@@ -16,13 +16,12 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   const days=parseDate(addDays(isoDate(nextMonth),-1)).getDate(),cells=Math.ceil((offset+days)/7)*7
   const loaded=!!account.session&&!account.loading
   const moveMonth=(direction:number)=>{const next=parseDate(first);next.setMonth(next.getMonth()+direction);const value=isoDate(next);if(validDate(value))onChange(value)}
-  return <section className={`card training-calendar${expanded?'':' is-compact'}`} aria-labelledby={headingId}>
+  return <section className={`card date-browser training-calendar${expanded?'':' is-compact'}`} aria-labelledby={headingId}>
     <header className="training-calendar-header">
-      <div><p className="eyebrow">TU CALENDARIO</p><h2 id={headingId}>{new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(monthDate)}</h2></div>
+      <div><h2 id={headingId}>{!expanded ? `Semana del ${shortDate(mondayOf(date))}` : new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(monthDate)}</h2></div>
       <div className="training-calendar-arrows"><button className="icon-button" aria-label={expanded?'Mes anterior':'Semana anterior'} onClick={()=>expanded?moveMonth(-1):onChange(addDays(date,-7))}><ChevronLeft/></button><button className="icon-button" aria-label={expanded?'Mes siguiente':'Semana siguiente'} onClick={()=>expanded?moveMonth(1):onChange(addDays(date,7))}><ChevronRight/></button></div>
     </header>
-    <div className="training-calendar-date"><label>Consultar entrenamiento<input type="date" value={date} onChange={event=>{if(validDate(event.target.value))onChange(event.target.value)}}/></label><button className="secondary" onClick={()=>onChange(today)}>Hoy</button></div>
-    <button className="text-button calendar-expand" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?'Ver solo la semana':'Ver calendario completo'}</button>
+    {expanded&&<label className="date-browser-jump">Ir a una fecha<input aria-label="Consultar entrenamiento" type="date" value={date} onChange={event=>{if(validDate(event.target.value))onChange(event.target.value)}}/></label>}
     {!expanded?<div className="training-week-strip" aria-label="Días de la semana">
       {Array.from({length:7},(_,i)=>addDays(mondayOf(date),i)).map(value=>{
         const trained=loaded && value<=today && attendanceEntryValid(`attendance:${value}`,account.values[`attendance:${value}`])
@@ -33,7 +32,7 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
           aria-label={[fullDate(value),trained?'entrenado':status].filter(Boolean).join(', ')}
           onClick={()=>onChange(value)}>
           <small>{['D','L','M','X','J','V','S'][parseDate(value).getDay()]}</small>
-          <b>{parseDate(value).getDate()}</b><small className="week-status">{status}</small>
+          <b>{parseDate(value).getDate()}</b><span className="week-mark" aria-hidden="true">{trained?<Check size={13}/>:planned?<i className="calendar-plan-marker"/>:null}</span>
         </button>
       })}
     </div>:<>    <div className="training-calendar-weekdays" aria-hidden="true">{['L','M','X','J','V','S','D'].map(day=><span key={day}>{day}</span>)}</div>
@@ -49,8 +48,12 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
       })}
     </div>
 </>}
-    {loaded&&<p className="attendance-month-summary">{Object.entries(account.values).filter(([key,value])=>key.startsWith(`attendance:${date.slice(0,7)}`)&&attendanceEntryValid(key,value)&&value.date<=today).length} días entrenados este mes · toca un día para consultar o registrar.</p>}
-    <footer className="training-calendar-legend"><span><span className="calendar-unrecorded">—</span>Sin registro</span><span><i className="calendar-plan-marker"/>Planificado</span><span><Check className="calendar-attendance-marker" size={14} strokeWidth={3}/>Entrenado</span></footer>
+    {expanded&&loaded&&<p className="attendance-month-summary">{Object.entries(account.values).filter(([key,value])=>key.startsWith(`attendance:${date.slice(0,7)}`)&&attendanceEntryValid(key,value)&&value.date<=today).length} días entrenados este mes · toca un día para consultar o registrar.</p>}
+    <footer className="training-calendar-legend">{expanded&&<span><span className="calendar-unrecorded">—</span>Sin registro</span>}<span><i className="calendar-plan-marker"/>Planificado</span><span><Check className="calendar-attendance-marker" size={14} strokeWidth={3}/>Entrenado</span></footer>
+    <div className="date-browser-actions">
+      <button className="text-button" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}><CalendarDays size={16}/>{expanded?'Ver semana':'Ver mes completo'}</button>
+      {date!==today&&<button className="text-button" onClick={()=>onChange(today)}>Volver a hoy</button>}
+    </div>
     {account.loading&&<p className="training-calendar-note" role="status">Cargando tus días guardados…</p>}
     {!account.loading&&account.session&&account.error&&<p className="training-calendar-note">La conexión de tu cuenta requiere atención; revisa el aviso de guardado.</p>}
   </section>

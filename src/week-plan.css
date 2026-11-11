@@ -1,0 +1,30 @@
+.week-plan-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100% - 24px));
+  max-height: calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 16px 60px #101c1736;
+}
+.week-plan-dialog::backdrop { background: #101c1780; }
+body:has(.week-plan-dialog[open]) { overflow: hidden; }
+.week-plan-dialog :is(h2,h3,p) { margin: 0; }
+.week-plan-dialog h2 { font-size: 24px; margin: 6px 0 8px; }
+.week-plan-dialog h2:focus { outline: 0; }
+.week-plan-dialog .week-plan-back,.week-plan-current { display: flex; align-items: center; gap: 6px; }
+.week-plan-back { min-height: 44px; padding: 0; border: none; }
+.week-plan-dialog .week-plan-label { color: var(--muted); font-size: 14px; }
+.week-plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin: 16px 0; }
+.week-plan-grid button { position: relative; border: 1px solid var(--line); border-radius: 12px; min-height: 44px; padding: 6px; background: var(--surface); color: var(--text); font: inherit; font-weight: 650; }
+.week-plan-grid button[aria-pressed=true] { color: var(--on-accent); background: var(--olive); border-color: var(--olive); }
+.week-plan-grid svg { position: absolute; right: 5px; top: 5px; }
+.week-plan-phase { padding: 14px; border-radius: 14px; background: var(--surface2); margin-bottom: 14px; }
+.week-plan-phase small,.week-plan-current { font-size: 12px; color: var(--muted); }
+.week-plan-phase h3 { margin: 4px 0 7px; font-size: 19px; }
+.week-plan-phase p { line-height: 1.45; }
