@@ -1,0 +1,104 @@
+/* The surface has a transparent circular notch. The Home control sits inside
+   the notch, so the page is visible through the gap around the button. */
+.app-shell > .bottom-nav.main-dock {
+  --bar-surface: #293e32;
+  --bar-text: #dce8dd;
+  --bar-active: #fff;
+  --home-surface: #f0f4e9;
+  --home-ink: #314e3c;
+  --notch-radius: 34px;
+  position: fixed;
+  z-index: 30;
+  inset: auto auto max(8px, env(safe-area-inset-bottom, 0px)) 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0,1fr));
+  width: min(450px, calc(100% - 20px));
+  max-width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px);
+  height: 64px;
+  padding: 3px 5px;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  isolation: isolate;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  filter: drop-shadow(0 5px 10px #10271930);
+}
+.app-shell > .main-dock[hidden] { display: none; }
+.app-shell > .main-dock::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: 22px;
+  background: var(--bar-surface);
+  border: 1px solid #a8c1ae44;
+  -webkit-mask-image: radial-gradient(circle at 50% 3px, transparent var(--notch-radius), #000 calc(var(--notch-radius) + 1px));
+  mask-image: radial-gradient(circle at 50% 3px, transparent var(--notch-radius), #000 calc(var(--notch-radius) + 1px));
+}
+.dark .app-shell > .main-dock {
+  --bar-surface: #293c32;
+  --bar-text: #deeadf;
+  --home-surface: #e6efdb;
+  --home-ink: #203b29;
+}
+.glass .app-shell > .main-dock {
+  --bar-surface: #f5f8ff;
+  --bar-text: #475770;
+  --bar-active: #183e70;
+  --home-surface: #fff;
+  --home-ink: #274e81;
+}
+.glass .app-shell > .main-dock::before { background: linear-gradient(110deg,#f0f8ff,#fff 51%,#f6f1ff); border-color: #cbd3e3; }
+.app-shell > .main-dock button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 14px;
+  border: 0;
+  background: none;
+  color: var(--bar-text);
+  box-shadow: none;
+  font-size: clamp(9px,2.45vw,11px);
+  line-height: 1.15;
+  font-weight: 550;
+}
+.app-shell > .main-dock button:hover,
+.app-shell > .main-dock button[aria-current="page"] { color: var(--bar-active); background: transparent; }
+.app-shell > .main-dock button[aria-current="page"] { font-weight: 750; }
+.main-dock .dock-glyph { width: 42px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+.main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #ffffff23; }
+.glass .main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #dbe6fb; }
+.app-shell > .main-dock svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.main-dock .dock-label { white-space: nowrap; }
+.app-shell > .main-dock .dock-home { justify-content: flex-end; padding-bottom: 8px; }
+.main-dock .dock-home .dock-glyph {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--home-ink);
+  background: var(--home-surface);
+  border: 1px solid #9bab9e;
+  box-shadow: 0 3px 8px #142d2020;
+}
+.main-dock .dock-home[aria-current="page"] .dock-glyph { background: #d4e6bd; border-color: #afc69c; }
+.glass .main-dock .dock-home[aria-current="page"] .dock-glyph { background: linear-gradient(145deg,#d7eeff,#ebe1ff); border-color: #b1bede; }
+.app-shell > .main-dock .dock-home svg { width: 25px; height: 25px; stroke-width: 2; }
+.app-shell > .main-dock button:focus-visible { outline: 2px solid var(--bar-active); outline-offset: -2px; }
+.app-shell:has(> .main-dock) { padding-bottom: calc(118px + env(safe-area-inset-bottom,0px)); }
+html:has(.main-dock) { scroll-padding-bottom: calc(118px + env(safe-area-inset-bottom,0px)); }
+html:has(.main-dock[hidden]) { scroll-padding-bottom: 16px; }

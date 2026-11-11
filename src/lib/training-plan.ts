@@ -31,7 +31,7 @@ export function trainingPlanValid(value:unknown):value is TrainingPlan{
 }
 export function trainingEntryValid(key:string,value:unknown):value is TrainingPlan{
   const date=key.slice('training:'.length)
-  return key.startsWith('training:')&&validDate(date)&&trainingPlanValid(value)&&(parseDate(date).getDay()!==3||value.type==='cardio')
+  return key.startsWith('training:')&&validDate(date)&&trainingPlanValid(value)&&(parseDate(date).getDay()!==3||value.type!=='strength')
 }
 export function workoutForDate(date:string,plan?:TrainingPlan):WorkoutDay{
   const base=workoutDays.find(day=>day.day===parseDate(date).getDay())!

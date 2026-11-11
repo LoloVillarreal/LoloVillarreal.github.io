@@ -12,6 +12,7 @@ import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen
 import ToolsScreen from './ToolsScreen'
 import SectionSwitch from './SectionSwitch'
 import './access.css'
+import './main-dock.css'
 import type { AppSettings, CardioLog, NavSection, ProgressLog, WorkoutLog } from './types'
 
 const GymPreview=lazy(()=>import('./GymPreview'))
@@ -25,7 +26,25 @@ function Workspace(){
   useEffect(()=>{const change=()=>setRoute(location.hash);window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
-  const [navigation,setNavigation]=useStored('navigation',()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
+  const [navigation,setNavigation]=useState(()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
+  const [homeVisit,setHomeVisit]=useState(0)
+  const [keyboardOpen,setKeyboardOpen]=useState(false)
+  useEffect(()=>{
+    const viewport=window.visualViewport
+    if(!viewport)return
+    const update=()=>{
+      const editing=document.activeElement?.matches('input, textarea, [contenteditable=true]')
+      setKeyboardOpen(Boolean(editing && window.innerHeight-viewport.height>120))
+    }
+    viewport.addEventListener('resize',update)
+    document.addEventListener('focusin',update)
+    document.addEventListener('focusout',update)
+    return ()=>{
+      viewport.removeEventListener('resize',update)
+      document.removeEventListener('focusin',update)
+      document.removeEventListener('focusout',update)
+    }
+  },[])
   const [settings,saveSettings]=useStored<AppSettings>('settings',defaultSettings)
   const [checks]=useStored<Record<string,boolean>>('mealChecks',{})
   const [workoutLogs,setWorkoutLogs]=useState<WorkoutLog[]>([])
@@ -84,7 +103,7 @@ function Workspace(){
   },[navigation.day,trainingDirty])
   useEffect(()=>{if(toast){const id=setTimeout(()=>notify(''),4500);return()=>clearTimeout(id)}},[toast])
   const go=(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>{
-    if(trainingDirty&&(section!==navigation.section||(date&&date!==navigation.trainingDate)||(tab&&tab!==navigation.tab))&&!confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?'))return false
+    if(trainingDirty&&(section==='home'||section!==navigation.section||(date&&date!==navigation.trainingDate)||(tab&&tab!==navigation.tab))&&!confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?'))return false
     setProgressIntent(undefined)
     if(section==='training'&&date&&reader)setReader(null)
     setNavigation(v=>({...v,section:tab==='calc'?'nutrition':section,tool:tab==='calc'?'calc':'',...(date?{trainingDate:date}:{}),...(tab?{tab:tab==='calc'?'settings':tab}:{})}));return true
@@ -112,17 +131,37 @@ function Workspace(){
   const cacheMessage=cacheReady?'Guía disponible sin conexión':cacheError||!('serviceWorker' in navigator)?'Guía disponible con conexión':'Preparando la guía para usarla sin conexión…'
   return <div className="app-shell">
     {serviceNotice}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Hoy',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
-    <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>
+    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Inicio',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
+    {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
     <main className={`workspace workspace--${section}`}>
-      {section==='home'&&<HomeScreen go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
+      {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''} setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}
       {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>{if(tab==='calc')go('nutrition',undefined,'calc');else setNavigation(v=>({...v,tab}))}} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     {toast&&<div className="toast" role="status">{toast}</div>}
-    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Hoy',Home],['training','Entrenos',Dumbbell],['nutrition','Herramientas',Wrench],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
+    <nav className="bottom-nav main-dock" aria-label="Navegación principal" hidden={keyboardOpen}>
+      {([
+        ['training','Entrenos',Dumbbell], ['progress','Progreso',TrendingUp],
+        ['home','Inicio',Home],
+        ['nutrition','Herramientas',Wrench], ['more','Ajustes',Settings],
+      ] as const).map(([id,label,Icon])=>
+        <button key={id} type="button" className={id==='home'?'dock-home':undefined}
+          aria-current={id===section?'page':undefined}
+          onClick={()=>{
+            if(!go(id,undefined,id==='more'?'settings':undefined))return
+            if(id==='home'){
+              if(reader)setReader(null)
+              setHomeVisit(previous=>previous+1)
+              window.scrollTo(0,0)
+            }
+          }}>
+          <span className="dock-glyph"><Icon aria-hidden="true"/></span>
+          <span className="dock-label">{label}</span>
+        </button>
+      )}
+    </nav>
   </div>
 }
 

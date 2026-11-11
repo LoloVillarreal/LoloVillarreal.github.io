@@ -56,9 +56,9 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   </section>
 }
 
-export function AttendanceControl({date,day,notify,finishGuide=false,recent=false,onRegistered}:{
+export function AttendanceControl({date,day,notify,finishGuide=false,recent=false,existingOnly=false,onRegistered}:{
   date:string; day:WorkoutDay; notify:(message:string)=>void
-  finishGuide?:boolean; recent?:boolean; onRegistered?:()=>void
+  existingOnly?:boolean; finishGuide?:boolean; recent?:boolean; onRegistered?:()=>void
 }){
   const account=useAccount(),key=`attendance:${date}`,value=account.values[key],today=isoDate()
   const entry=attendanceEntryValid(key,value)?value:undefined
@@ -69,7 +69,7 @@ export function AttendanceControl({date,day,notify,finishGuide=false,recent=fals
   useEffect(()=>{setBusy(false);setError('');setRemoved(null)},[context])
   useEffect(()=>{const update=()=>setOnline(navigator.onLine);window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{window.removeEventListener('online',update);window.removeEventListener('offline',update)}},[])
   const disabled=busy||account.saving||!online
-  const allowed=date<=today&&(day.type==='cardio'||day.type==='strength'&&day.exercises.length>0)&&(parseDate(date).getDay()!==3||day.type==='cardio')
+  const allowed=!existingOnly&&date<=today&&(day.type==='cardio'||day.type==='strength'&&day.exercises.length>0)&&(parseDate(date).getDay()!==3||day.type==='cardio')
   const mark=async()=>{
     if(marking.current||busy||account.saving||entry||!allowed||!account.session||account.loading)return
     if(!online){setError('Registro pendiente. Vuelve a conectarte y pulsa Reintentar registro.');return}
@@ -124,10 +124,11 @@ export function AttendanceControl({date,day,notify,finishGuide=false,recent=fals
     catch{if(contextRef.current===context)setError('No se pudo confirmar el cambio. Comprueba tu conexión y vuelve a intentarlo.')}
     finally{if(contextRef.current===context)setBusy(false)}
   }
+  if(existingOnly&&!entry&&!removed)return null
   if(account.loading)return <section className="card attendance-control"><p role="status">Cargando tu historial de entrenamiento…</p></section>
   if(!account.session)return <section className="card attendance-control"><p>Inicia sesión en Progreso para guardar tus días entrenados.</p></section>
   return <section tabIndex={-1} className={`card attendance-control${entry?' attendance-control--done':''}`} aria-busy={busy}>
-    {entry?<><div className="attendance-heading"><CheckCircle2 aria-hidden="true"/><div><p className="eyebrow">DÍA ENTRENADO · {shortDate(entry.date)}</p><h3>{entry.title}</h3></div></div><p>{entry.type==='strength'?'Fuerza':'Cardio'} · {account.error||error?'Pendiente de confirmar.':busy||account.saving?'Confirmando el cambio en tu cuenta…':'Este día cuenta en tus estadísticas.'}</p><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>{recent?'Deshacer registro':'Quitar día entrenado'}</button></>:<>
+    {entry?<><div className="attendance-heading"><CheckCircle2 aria-hidden="true"/><div><p className="eyebrow">DÍA ENTRENADO · {shortDate(entry.date)}</p><h3>{entry.title}</h3></div></div><p>{entry.type==='strength'?'Fuerza':'Cardio'} · {account.error||error?'Pendiente de confirmar.':busy||account.saving?'Confirmando el cambio en tu cuenta…':'Este día cuenta en tus estadísticas.'}</p><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>{recent?'Deshacer registro':'Quitar día entrenado'}</button></>:existingOnly?null:<>
       <h3>{date>today?'Una sesión por venir':day.type==='recovery'?'Un día para recuperar':finishGuide?'Final de tu guía':'Registrar entrenamiento'}</h3>
       <p>{date>today?'Podrás registrarlo cuando llegue la fecha.':day.type==='recovery'?'El descanso no suma días entrenados.':day.type==='strength'&&!day.exercises.length?'Añade ejercicios a la rutina antes de registrar este día.':'Regístralo al terminar para que cuente en Progreso.'}</p>
       {allowed&&<button className="primary full" disabled={busy||account.saving||(!online&&!finishGuide)} onClick={mark}><Check size={18}/>{busy?'Guardando…':error?'Reintentar registro':finishGuide?'Terminar y registrar':'Registrar entrenamiento realizado'}</button>}

@@ -1,0 +1,63 @@
+.workspace .day-plan-editor {
+  --editor-gap: 16px;
+  width: 100%;
+  min-width: 0;
+  padding: clamp(16px, 4vw, 26px) !important;
+  scroll-margin-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+.plan-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--editor-gap);
+}
+.day-plan-editor .plan-editor-header p { margin: 0 0 4px; color: var(--muted); font-size: 13px; }
+.day-plan-editor .plan-editor-header h2 { margin: 0; font-size: clamp(21px,5vw,27px); line-height: 1.15; }
+.plan-editor-header .text-button { flex-shrink: 0; min-height: 44px; padding-inline: 8px; }
+.day-plan-editor .plan-editor-body {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: var(--editor-gap);
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+.day-plan-editor .plan-editor-body .section-head,
+.day-plan-editor .plan-editor-body label,
+.day-plan-editor .plan-editor-body .reorder-hint,
+.day-plan-editor .plan-editor-body .small-note,
+.day-plan-editor .plan-editor-rest { margin: 0; }
+.day-plan-editor .plan-editor-body .section-head { gap: 8px; flex-wrap: wrap; }
+.day-plan-editor .plan-editor-body .section-head h3 { margin: 0; font-size: 16px; }
+.day-plan-editor .plan-editor-body .section-head button { min-height: 44px; }
+.plan-editor-cardio,.plan-advanced { display: grid; grid-template-columns:minmax(0,1fr); gap: var(--editor-gap); }
+.day-plan-editor .plan-editor-cardio label,
+.day-plan-editor .plan-advanced>label:not(.plan-start-toggle),
+.day-plan-editor .plan-editor-fold>label { display: grid; gap: 6px; font-size: 13px; }
+.plan-editor-cardio input,.plan-editor-cardio select,.plan-editor-fold input,.plan-editor-fold textarea {
+  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: 44px; padding: 10px 12px; font-size: 16px;
+}
+.day-plan-editor .plan-editor-fold { margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.day-plan-editor .plan-editor-fold summary { padding: 11px 0; min-height: 44px; cursor: pointer; }
+.day-plan-editor .plan-editor-fold[open] > :not(summary) { margin-top: 4px; }
+.day-plan-editor .plan-editor-fold textarea { min-height: 76px; resize: vertical; }
+.day-plan-editor .plan-editor-fold .routine-picker { margin: 0; gap: 8px; }
+.day-plan-editor .plan-editor-fold .routine-option { padding: 12px; min-height: 56px; }
+.day-plan-editor .plan-start-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.day-plan-editor .plan-start-toggle input { width: 18px; height: 18px; min-height: 0; margin: 0; }
+.day-plan-editor .plan-editor-footer { display: grid; gap: 8px; }
+.day-plan-editor .plan-editor-footer p { margin: 0; font-size: 13px; }
+.plan-editor-footer button { width: 100%; min-height: 48px; scroll-margin-bottom: calc(108px + env(safe-area-inset-bottom)); }
+@media(min-width:620px) {
+  .plan-editor-cardio { grid-template-columns: minmax(0,2fr) minmax(0,1fr); align-items: end; }
+}
+.plan-select { position: relative; display: block; }
+.day-plan-editor .plan-select select {
+  appearance: none; -webkit-appearance: none;
+  height: 46px; min-height: 46px; padding-right: 36px;
+  background-color: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.plan-select svg { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); pointer-events: none; }

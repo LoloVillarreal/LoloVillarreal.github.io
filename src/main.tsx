@@ -10,6 +10,7 @@ import './training-calendar.css'
 import './training-compact.css'
 import './exercise-details.css'
 import './tools.css'
+import './layout-rhythm.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
