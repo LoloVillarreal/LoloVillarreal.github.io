@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import { flushSync } from 'react-dom'
-import { ArrowRight, Check, ChevronDown, Minus, Plus, SlidersHorizontal, X } from 'lucide-react'
+import { Check, ChevronDown, Minus, Plus, SlidersHorizontal, X } from 'lucide-react'
 import BarbellDrawing from './BarbellDrawing'
 import { barbells } from './data/barbells'
 import { platesPerSide, plateWeights } from './lib/gym-tools'
@@ -24,6 +24,14 @@ function readKg(text:string) {
   return /^(?:\d+(?:[.,]\d{0,2})?|[.,]\d{1,2})$/.test(text.trim()) && Number.isSafeInteger(Math.round(value*100)) ? value : null
 }
 
+function loadTarget(setup:Setup,barKg:number|null):Setup {
+  const targetKg=readKg(setup.target)
+  if(targetKg===null || barKg===null)return setup
+  const load=platesPerSide(targetKg,barKg)
+  if(!load)return setup
+  return {...setup,counts:Object.fromEntries(load.plates.map(({weight,count})=>[weight,count]))}
+}
+
 export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup:Dispatch<SetStateAction<Setup>>}) {
   const bar=barbells.find(item=>item.id===setup.barId) ?? barbells[0]
   const weightText=setup.barWeights[bar.id] ?? (bar.kg===null?'':number.format(bar.kg))
@@ -33,55 +41,44 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
   const perSide=loaded.reduce((sum,{weight,count})=>sum+weight*count,0)
   const total=barKg===null?null:barKg+2*perSide
   const targetKg=readKg(setup.target)
-  const suggested=targetKg!==null && barKg!==null ? platesPerSide(targetKg,barKg) : null
-  const possible=suggested && barKg!==null ? barKg+2*suggested.plates.reduce((sum,p)=>sum+p.weight*p.count,0) : null
   const [editWeight,setEditWeight]=useState(false)
   const selector=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null)
   const input=useRef<HTMLInputElement>(null),requestWeight=useRef(false)
-  const stage=useRef<HTMLElement>(null)
   const hasTarget=setup.target.trim()!==''
+  const approximate=total!==null && targetKg!==null && Math.round(total*100)<Math.round(targetKg*100)
   let targetHint=''
   if(hasTarget) {
     if(targetKg===null)targetHint='Revisa los kg'
-    else if(barKg===null)targetHint='Peso de barra'
-    else if(targetKg<barKg)targetHint='Mín. '+kg(barKg)
-    else if(suggested && suggested.remainder>0 && possible!==null)targetHint='≈ '+kg(possible)
+    else if(barKg!==null && targetKg<barKg)targetHint='Mín. '+kg(barKg)
+    else if(approximate)targetHint='≈ '+kg(total)
   }
 
   function changePlate(weight:number,change:1|-1) {
-    setSetup(s=>({...s,counts:{...s.counts,[weight]:Math.max(0,(s.counts[weight]??0)+change)}}))
+    setSetup(s=>({...s,target:'',counts:{...s.counts,[weight]:Math.max(0,(s.counts[weight]??0)+change)}}))
   }
-  function selectBar(id:string,needsWeight:boolean) {
-    requestWeight.current=needsWeight
-    setEditWeight(needsWeight)
-    setSetup(s=>({...s,barId:id}))
+  function selectBar(id:string,mass:number|null) {
+    requestWeight.current=mass===null
+    setEditWeight(mass===null)
+    setSetup(s=>loadTarget({...s,barId:id},mass))
     selector.current?.close()
   }
-  function applyTarget() {
-    if(targetKg!==null && barKg===null) {
-      flushSync(()=>setEditWeight(true))
-      input.current?.focus()
-      return
-    }
-    if(!suggested)return
-    setSetup(s=>({...s,counts:Object.fromEntries(suggested.plates.map(p=>[p.weight,p.count]))}))
-    stage.current?.focus()
-  }
   return <div className="bar-workbench">
-    <form className="bar-target" onSubmit={event=>{event.preventDefault();applyTarget()}}>
-      <input aria-label="Peso objetivo total con barra (kg)" placeholder="Peso objetivo" inputMode="decimal" enterKeyHint="go"
+    <div className="bar-target">
+      <input aria-label="Peso objetivo total con barra (kg)" placeholder="Peso objetivo" inputMode="decimal" enterKeyHint="done"
         aria-invalid={hasTarget && (targetKg===null || (barKg!==null && targetKg<barKg))}
-        aria-describedby={targetHint?'bar-target-hint':undefined}
+        aria-describedby="bar-target-hint"
         value={setup.target} onFocus={event=>event.currentTarget.select()}
-        onChange={event=>{const target=event.target.value;setSetup(s=>({...s,target}))}}/>
+        onKeyDown={event=>{if(event.key==='Enter')event.currentTarget.blur()}}
+        onChange={event=>{const target=event.target.value;setSetup(s=>loadTarget({...s,target},barKg))}}/>
       <span className="bar-target-unit" aria-hidden="true">kg</span>
-      <button type="submit" disabled={targetKg===null || (barKg!==null && !suggested)}
-        aria-label={possible!==null?'Colocar '+kg(possible):barKg===null?'Indicar peso de la barra':'Aplicar peso objetivo'}>
-        {targetHint&&<span id="bar-target-hint">{targetHint}</span>}<ArrowRight size={17} aria-hidden="true"/>
-      </button>
-    </form>
+      <span id="bar-target-hint" role="status" aria-atomic="true">{approximate&&<span className="sr-only">Peso aproximado: </span>}{targetHint}</span>
+      {targetKg!==null && barKg===null && <button type="button" onClick={()=>{
+        flushSync(()=>setEditWeight(true))
+        input.current?.focus()
+      }}>Indicar peso de la barra</button>}
+    </div>
 
-    <section className="card bar-stage" tabIndex={-1} ref={stage} aria-label="Tu barra montada">
+    <section className="card bar-stage" aria-label="Tu barra montada">
       <button ref={trigger} type="button" className="bar-selector" aria-haspopup="dialog" aria-label={'Elegir barra. Actual: '+bar.name}
         onClick={()=>{selector.current?.showModal();selector.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()}}>
         <span><small>Barra seleccionada</small><strong>{bar.name}</strong></span><span className="bar-change">Cambiar <ChevronDown size={16}/></span>
@@ -96,7 +93,10 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
       </button>}
       {(editWeight||bar.kg===null)&&<div className="bar-weight-field">
         <label>Peso de la barra (kg)<input ref={input} inputMode="decimal" value={weightText} placeholder="Por ejemplo, 12,5"
-          aria-invalid={weightText!==''&&barKg===null} onChange={event=>{const value=event.target.value;setSetup(s=>({...s,barWeights:{...s.barWeights,[bar.id]:value}}))}}/></label>
+          aria-invalid={weightText!==''&&barKg===null} onChange={event=>{
+            const value=event.target.value
+            setSetup(s=>loadTarget({...s,barWeights:{...s.barWeights,[bar.id]:value}},readKg(value)))
+          }}/></label>
         <small>{barKg===null&&weightText!==''?'Introduce un peso positivo o cero con hasta dos decimales.':bar.id==='smith'?'Usa la resistencia inicial indicada en tu máquina.':'Usa el peso indicado en tu barra.'}</small>
       </div>}
     </section>
@@ -130,7 +130,7 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
       <p>Puedes ajustar el peso al que indique tu gimnasio.</p>
       <div className="bar-picker-grid">{barbells.map(item=>{
         const mass=readKg(setup.barWeights[item.id] ?? (item.kg===null?'':String(item.kg)))
-        return <button type="button" key={item.id} aria-pressed={item.id===bar.id} onClick={()=>selectBar(item.id,mass===null)}>
+        return <button type="button" key={item.id} aria-pressed={item.id===bar.id} onClick={()=>selectBar(item.id,mass)}>
           <span className="bar-mini-bg"><BarbellDrawing shape={item.shape} miniature/></span>
           <strong>{item.name}</strong><small>{mass===null?'Indicar peso':kg(mass)}</small>
           {item.id===bar.id&&<Check className="bar-picker-check" size={15} aria-hidden="true"/>}

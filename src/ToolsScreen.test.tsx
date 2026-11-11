@@ -50,7 +50,7 @@ it('suma y quita pares conservando el montaje al cambiar de barra o visitar otra
   expect(document.activeElement).toBe(screen.getByRole('button',{name:'Añadir dos discos de 1,25 kg'}))
 })
 
-it('pide el peso de la Smith y solo coloca el peso objetivo realizable al confirmarlo',()=>{
+it('monta los discos al escribir el objetivo o completar el peso de la Smith, y permite ajustarlos a mano',()=>{
   HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
   HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
   render(<Tools/>)
@@ -58,14 +58,16 @@ it('pide el peso de la Smith y solo coloca el peso objetivo realizable al confir
   fireEvent.click(screen.getByRole('button',{name:/Elegir barra/}))
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:/Multipower/}))
   expect(screen.getByLabelText('Peso total').textContent).toBe('— kg')
-  fireEvent.change(screen.getByLabelText('Peso de la barra (kg)'),{target:{value:'7,5'}})
   const field=screen.getByRole('textbox',{name:'Peso objetivo total con barra (kg)'})
-  expect(field.compareDocumentPosition(screen.getByRole('button',{name:/Elegir barra/})) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   fireEvent.change(field,{target:{value:'30,5'}})
-  expect(screen.getByRole('button',{name:'Colocar 30 kg'}).textContent).toBe('≈ 30 kg')
-  expect(screen.getByLabelText('Peso total').textContent).toBe('7,5 kg')
-  fireEvent.click(screen.getByRole('button',{name:'Colocar 30 kg'}))
+  fireEvent.change(screen.getByLabelText('Peso de la barra (kg)'),{target:{value:'7,5'}})
+  expect(screen.getByText('≈ 30 kg')).toBeTruthy()
   expect(screen.getByLabelText('Peso total').textContent).toBe('30 kg')
+  fireEvent.change(field,{target:{value:'47,5'}})
+  expect(screen.getByLabelText('Peso total').textContent).toBe('47,5 kg')
+  fireEvent.click(screen.getByRole('button',{name:'Quitar dos discos de 20 kg'}))
+  expect((field as HTMLInputElement).value).toBe('')
+  expect(screen.getByLabelText('Peso total').textContent).toBe('7,5 kg')
 })
 
 it('abre una ficha pulsando su nombre y mantiene la búsqueda al volver', () => {
