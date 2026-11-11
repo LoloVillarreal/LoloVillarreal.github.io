@@ -34,3 +34,11 @@ it.each(['Hip thrust', 'Bienestar'])('protege las medidas al abrir %s y conserva
     weight: 58, waist: 70, hip: 90, notes: 'sesión de prueba',
   })))
 })
+
+it('abre la marca de hip thrust desde Hoy y conserva la privacidad de las medidas', async () => {
+  render(<ProgressScreen hide initialCapture="strength" notify={vi.fn()} onTraining={vi.fn()}/>)
+  const form = within(await screen.findByRole('region', {name:'Registro de progreso'}))
+  expect(form.getByLabelText('Carga máxima hip thrust (kg)')).toBeDefined()
+  expect(form.queryByLabelText('Peso corporal (kg)')).toBeNull()
+  expect(form.queryByLabelText('Cadera (cm)')).toBeNull()
+})

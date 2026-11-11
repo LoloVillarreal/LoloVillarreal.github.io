@@ -1,15 +1,16 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { CalendarDays, ChevronRight, Plus, TrendingUp } from 'lucide-react'
 import { AccountGate, useAccount, useCloudValue } from './lib/account'
 import { attendanceFromValues, attendanceStats } from './lib/attendance'
 import { hipThrustProgress, movingAverage } from './lib/calculations'
-import { addDays, isoDate, parseDate, shortDate, validDate } from './lib/dates'
+import { addDays, isoDate, mondayOf, parseDate, shortDate, validDate } from './lib/dates'
 import { emptyProgress, progressDraft, progressEntry } from './lib/progress-entry'
 import type { ProgressDraft, ProgressLog } from './types'
 
 const ProgressChart = lazy(() => import('./ProgressChart'))
 const chartLoading = <p role="status">Cargando gráfica…</p>
 const fmt=(n:number)=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:1}).format(n)
+const markDate=(date:string)=>new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short',year:'numeric'}).format(parseDate(date))
 const energyLabels=['Muy baja','Baja','Normal','Buena','Mucha energía']
 type Notify=(message:string)=>void
 type Capture='weight'|'strength'|'measures'|'wellbeing'
@@ -18,22 +19,45 @@ const hasDraft=(form:ProgressDraft)=>['weight','waist','hip','hipThrustKg','hipT
 function Metric({label,value,sub}:{label:string;value:string;sub:string}){return <article className="metric"><p>{label}</p><strong>{value}</strong><small>{sub}</small></article>}
 
 export function AttendanceSummary({compact=false,onTraining}:{compact?:boolean;onTraining?:()=>void}){
-  const account=useAccount(),stats=attendanceStats(attendanceFromValues(account.values))
+  const account=useAccount(),entries=attendanceFromValues(account.values),today=isoDate()
+  const stats=attendanceStats(entries,today),trainedDates=new Set(entries.map(entry=>entry.date))
   if(!account.session)return null
   if(account.loading)return <section className="card attendance-summary" role="status">Recuperando tus días entrenados…</section>
   return <section className={`card attendance-summary ${compact?'attendance-summary--compact':''}`} aria-label="Resumen de días entrenados">
-    <div className="section-head"><div><p className="eyebrow"><CalendarDays size={15}/> TU CONSTANCIA</p><h2>{compact?'Cada día cuenta':'Así vas entrenando'}</h2></div>{onTraining&&<button className="text-button" onClick={onTraining}>Ver calendario<ChevronRight size={16}/></button>}</div>
-    <div className="attendance-metrics"><Metric label="Esta semana" value={String(stats.week)} sub="días · lunes a domingo"/><Metric label="Este mes" value={String(stats.month)} sub="días entrenados"/><Metric label="En total" value={String(stats.total)} sub="días registrados"/></div>
-    {!compact&&<><div className="section-head frequency-heading"><h3>Últimas 8 semanas</h3><span className="small-note">La actual está en curso</span></div><ol className="frequency-chart" aria-label="Días entrenados por semana">{stats.weeks.map((week,index)=><li key={week.start} aria-label={`Semana del ${shortDate(week.start)}: ${week.count} días${index===7?', en curso':''}`}><strong>{week.count}</strong><div className="frequency-track"><span style={{height:`${week.count/7*100}%`}}/></div><small>{new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'numeric'}).format(parseDate(week.start))}</small>{index===7&&<small>Ahora</small>}</li>)}</ol><p className="small-note">Últimos 28 días: <b>{stats.last28}</b> días entrenados · 28 días anteriores: <b>{stats.previous28}</b>.</p></>}
-    <p className="small-note">{stats.total===0?'Marca tu primer día entrenado en el calendario para empezar.':'Cada fecha cuenta una vez, tanto si haces fuerza como cardio.'} Los días solo planificados no se suman.</p>
+    <div className="section-head">
+      <h2>{compact?'Tu asistencia':'Días entrenados'}</h2>
+      {onTraining&&<button className="text-button" onClick={onTraining}><CalendarDays size={16}/>Ver calendario</button>}
+    </div>
+    <p className="week-count"><strong>{stats.week}</strong> {stats.week===1?'día esta semana':'días esta semana'}</p>
+    <ol className="progress-week" aria-label="Asistencia de la semana">
+      {['L','M','X','J','V','S','D'].map((letter,index)=>{
+        const date=addDays(mondayOf(today),index),trained=date<=today&&trainedDates.has(date)
+        const status=trained?'entrenado':date>today?'próximo':'sin registro'
+        return <li key={date} data-trained={trained||undefined} aria-current={date===today?'date':undefined}
+          aria-label={`${shortDate(date)}, ${status}`}><small aria-hidden="true">{letter}</small>
+          <b aria-hidden="true">{parseDate(date).getDate()}</b><span aria-hidden="true">{trained?'✓':date<=today?'—':' '}</span></li>
+      })}
+    </ol>
+    {!compact&&<details className="attendance-history">
+      <summary>Ver historial de asistencia</summary>
+      <p>{stats.month} días este mes · {stats.total} en total.</p>
+      <h3>Últimas 8 semanas</h3>
+      <ol className="frequency-chart" aria-label="Días entrenados por semana">{stats.weeks.map((week,index)=><li key={week.start} aria-label={`Semana del ${shortDate(week.start)}: ${week.count} días${index===7?', en curso':''}`}>
+        <strong>{week.count}</strong><div className="frequency-track"><span style={{height:`${week.count/7*100}%`}}/></div>
+        <small>{new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'numeric'}).format(parseDate(week.start))}</small>{index===7&&<small>Ahora</small>}
+      </li>)}</ol>
+      <p className="small-note">Últimos 28 días: <b>{stats.last28}</b> días entrenados · 28 días anteriores: <b>{stats.previous28}</b>.</p>
+    </details>}
   </section>
 }
 
-export function ProgressScreen({hide,notify,onTraining}:{hide:boolean;notify:Notify;onTraining:()=>void}){
-  return <AccountGate><ProgressDashboard hide={hide} notify={notify} onTraining={onTraining}/></AccountGate>
+type ProgressProps={hide:boolean;notify:Notify;onTraining:()=>void;initialCapture?:'strength'}
+
+export function ProgressScreen({hide,notify,onTraining,initialCapture}:ProgressProps){
+  return <AccountGate><ProgressDashboard hide={hide} notify={notify} onTraining={onTraining} initialCapture={initialCapture}/></AccountGate>
 }
 
-function ProgressDashboard({hide,notify,onTraining}:{hide:boolean;notify:Notify;onTraining:()=>void}){
+function ProgressDashboard({hide,notify,onTraining,initialCapture}:ProgressProps){
   const account=useAccount()
   const logs=Object.entries(account.values).filter(([key])=>key.startsWith('progress:')).map(([,value])=>value as ProgressLog)
   const [form,setForm]=useCloudValue<ProgressDraft>('progressDraft',emptyProgress)
@@ -44,12 +68,24 @@ function ProgressDashboard({hide,notify,onTraining}:{hide:boolean;notify:Notify;
   const existing=logs.find(log=>log.id===form.id)
   const weights=movingAverage(logs),lastWeight=weights[weights.length-1],firstWeight=weights[0]
   const {history:strength,best,first,latest,gain}=hipThrustProgress(logs)
+  const [strengthExpanded,setStrengthExpanded]=useState(false)
   const latestOnDate=(date:string)=>[...logs].reverse().find(log=>log.date===date)
-  const focusForm=()=>requestAnimationFrame(()=>formRef.current?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}))
+  const focusForm=()=>requestAnimationFrame(()=>{
+    formRef.current?.focus({preventScroll:true})
+    formRef.current?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})
+  })
   const begin=(kind:Capture)=>{
     if(!hasDraft(form)){const previous=latestOnDate(isoDate());setForm(previous?progressDraft(previous):emptyProgress())}
     setCapture(kind);setOpen(true);setMessage('');focusForm()
   }
+  const openedFromToday=useRef(false)
+  useEffect(()=>{
+    if(!initialCapture){openedFromToday.current=false;return}
+    if(!openedFromToday.current&&!account.loading){
+      openedFromToday.current=true
+      begin(initialCapture)
+    }
+  },[initialCapture,account.loading])
   const edit=(log:ProgressLog)=>{if(hasDraft(form)&&(!existing||JSON.stringify(form)!==JSON.stringify(progressDraft(existing)))&&!confirm('Hay un borrador pendiente. ¿Quieres sustituirlo por este registro?'))return;setForm(progressDraft(log));if(hide)setCapture(null);setOpen(true);setMessage('');focusForm()}
   const changeDate=(date:string)=>{
     if(!validDate(date)||date===form.date)return
@@ -74,8 +110,21 @@ function ProgressDashboard({hide,notify,onTraining}:{hide:boolean;notify:Notify;
   const weightDelta=lastWeight&&firstWeight?lastWeight.weight!-firstWeight.weight!:undefined
   return <>
     <AttendanceSummary onTraining={onTraining}/>
-    <section className="card progress-capture"><div className="section-head"><div><p className="eyebrow">UN DATO, UN PEQUEÑO PASO</p><h2>Añadir progreso</h2></div><Plus size={24}/></div><p>Elige qué quieres guardar. Basta con un dato.</p><div className="capture-options">{captures.map(([id,label])=><button className="secondary" key={id} disabled={busy} onClick={()=>begin(id)}>{label}<Plus size={16}/></button>)}</div>{hasDraft(form)&&!open&&<button className="text-button draft-resume" onClick={()=>{if(hide)setCapture(null);setOpen(true);focusForm()}}>Continuar {existing?'edición':'borrador'} del {shortDate(form.date)}<ChevronRight size={16}/></button>}</section>
-    {open&&<section ref={formRef} className="card progress-entry" aria-label="Registro de progreso"><div className="section-head"><div><p className="eyebrow">{existing?'COMPLETAR O CORREGIR':'GUARDAR UN DATO'}</p><h2>{existing?'Editar registro':'Nuevo registro'}</h2></div><button className="text-button" disabled={busy} onClick={()=>setOpen(false)}>Cerrar</button></div><p className="small-note">{existing?'Los datos de esta fecha están cargados; puedes completarlos sin crear otra entrada.':'Peso, fuerza, medidas y bienestar son opcionales. Los campos vacíos se quedan sin registrar.'}</p>
+    <section className="card hip-thrust-card strength-snapshot">
+      <div className="section-head"><h2>Hip thrust</h2>{latest&&<button className="text-button" disabled={busy} onClick={()=>begin('strength')}>Añadir marca<Plus size={16}/></button>}</div>
+      {latest&&first&&best?<><p className="small-note">Última marca</p>
+        <p className="strength-latest"><strong>{fmt(latest.hipThrustKg!)} kg</strong><span>{latest.hipThrustReps===undefined?'Repeticiones sin registrar':`× ${latest.hipThrustReps} reps`}</span></p>
+        <time dateTime={latest.date}>{markDate(latest.date)}</time>
+        <details onToggle={event=>setStrengthExpanded(event.currentTarget.open)}>
+          <summary>Ver récord y evolución</summary>
+          <div className="strength-metrics">{([['Récord',best],['Primera marca',first]] as const).map(([label,log])=><Metric key={label} label={label} value={`${fmt(log.hipThrustKg!)} kg`} sub={`${markDate(log.date)} · ${log.hipThrustReps===undefined?'Repeticiones sin registrar':log.hipThrustReps+' reps'}`}/>)}</div>
+          {strength.length>1&&<p className="strength-gain">+{fmt(gain)} kg entre la primera marca y el récord</p>}
+          {strengthExpanded&&<Suspense fallback={chartLoading}><ProgressChart kind="strength" points={strength.map(log=>({fecha:shortDate(log.date),carga:log.hipThrustKg}))}/></Suspense>}
+          <p className="small-note">Compara marcas de la misma variante, recorrido y repeticiones.</p>
+        </details></>:<><p>Guarda la carga y las repeticiones de tu mejor serie del día.</p><button className="primary" disabled={busy} onClick={()=>begin('strength')}>Añadir mi primera marca</button></>}
+    </section>
+    <section className="card progress-capture"><div className="section-head"><h2>Añadir progreso</h2><Plus size={24}/></div><p>Elige qué quieres guardar. Basta con un dato.</p><div className="capture-options">{captures.map(([id,label])=><button className="secondary" key={id} disabled={busy} onClick={()=>begin(id)}>{label}<Plus size={16}/></button>)}</div>{hasDraft(form)&&!open&&<button className="text-button draft-resume" onClick={()=>{if(hide)setCapture(null);setOpen(true);focusForm()}}>Continuar {existing?'edición':'borrador'} del {shortDate(form.date)}<ChevronRight size={16}/></button>}</section>
+    {open&&<section ref={formRef} tabIndex={-1} className="card progress-entry" aria-label="Registro de progreso"><div className="section-head"><div><p className="eyebrow">{existing?'COMPLETAR O CORREGIR':'GUARDAR UN DATO'}</p><h2>{existing?'Editar registro':'Nuevo registro'}</h2></div><button className="text-button" disabled={busy} onClick={()=>setOpen(false)}>Cerrar</button></div><p className="small-note">{existing?'Los datos de esta fecha están cargados; puedes completarlos sin crear otra entrada.':'Peso, fuerza, medidas y bienestar son opcionales. Los campos vacíos se quedan sin registrar.'}</p>
       <form onSubmit={event=>{event.preventDefault();void save()}}><fieldset className="progress-inputs" disabled={busy}>
         <label>Fecha del registro<input type="date" max={isoDate()} value={form.date} onChange={event=>changeDate(event.target.value)} required/></label>
         {hide&&<p className="small-note">Para ver o editar el peso o las medidas, selecciona su categoría.</p>}
@@ -91,15 +140,8 @@ function ProgressDashboard({hide,notify,onTraining}:{hide:boolean;notify:Notify;
         <p className="small-note">El borrador se conserva en tu cuenta mientras escribes. Pulsa Guardar para que cuente en el historial; necesitas conexión.</p>
       </fieldset></form>
     </section>}
-    <section className="card progress-overview"><p className="eyebrow"><TrendingUp size={15}/> TU EVOLUCIÓN</p><h2>Peso y fuerza, con perspectiva</h2><div className="progress-key-metrics"><Metric label="Último peso" value={hide?'Oculto':lastWeight?`${fmt(lastWeight.weight!)} kg`:'—'} sub={hide?'Puedes mostrarlo en Ajustes':lastWeight?shortDate(lastWeight.date):'Añade tu primer peso'}/><Metric label="Cambio de peso" value={hide?'Oculto':weights.length>1?`${weightDelta!>0?'+':''}${fmt(weightDelta!)} kg`:'—'} sub={hide?'Medidas privadas':firstWeight?`Desde ${shortDate(firstWeight.date)}`:'Respecto al primer registro'}/></div></section>
+    <section className="card progress-overview"><p className="eyebrow"><TrendingUp size={15}/> TU EVOLUCIÓN</p><h2>Peso corporal</h2><div className="progress-key-metrics"><Metric label="Último peso" value={hide?'Oculto':lastWeight?`${fmt(lastWeight.weight!)} kg`:'—'} sub={hide?'Puedes mostrarlo en Ajustes':lastWeight?shortDate(lastWeight.date):'Añade tu primer peso'}/><Metric label="Cambio de peso" value={hide?'Oculto':weights.length>1?`${weightDelta!>0?'+':''}${fmt(weightDelta!)} kg`:'—'} sub={hide?'Medidas privadas':firstWeight?`Desde ${shortDate(firstWeight.date)}`:'Respecto al primer registro'}/></div></section>
     <section className="card chart-card progress-weight"><h2>Tendencia de peso corporal</h2>{weights.length&&!hide?<Suspense fallback={chartLoading}><ProgressChart kind="weight" points={weights.map(log=>({fecha:shortDate(log.date),peso:log.weight,media:+log.average.toFixed(2)}))}/></Suspense>:<p className="empty">{hide?'Medidas ocultas por tu preferencia de privacidad.':'Tu gráfica aparecerá al guardar un peso.'}</p>}<p className="small-note">Peso registrado y media de los últimos 3 registros con peso. Una variación aislada no describe toda la tendencia.</p></section>
-    <section className="card hip-thrust-card"><p className="eyebrow">FUERZA EN HIP THRUST</p><h2>Tus marcas de hip thrust</h2>
-      {first&&best&&latest&&<div className="progress-key-metrics">
-        {([['Primera marca',first],['Récord',best],['Última sesión',latest]] as const).map(([label,log]) =>
-          <Metric key={label} label={label} value={`${fmt(log.hipThrustKg!)} kg`}
-            sub={`${new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short',year:'numeric'}).format(parseDate(log.date))} · ${log.hipThrustReps===undefined?'Repeticiones sin registrar':`${log.hipThrustReps} reps`}`}/>
-        )}
-      </div>}<p className="strength-gain">{strength.length>1?`+${fmt(gain)} kg entre la primera marca y el récord`:'Tu primer registro será el punto de partida.'}</p>{strength.length>0&&<Suspense fallback={chartLoading}><ProgressChart kind="strength" points={strength.map(log=>({fecha:shortDate(log.date),carga:log.hipThrustKg}))}/></Suspense>}<p className="small-note">{first?`Desde ${shortDate(first.date)}. `:''}Más kilos con condiciones comparables muestran evolución del rendimiento; no miden por sí solos la fuerza del glúteo.</p></section>
     <section className="card progress-history"><div className="section-head"><h2>Historial de progreso</h2><span className="status">{logs.length}</span></div>{logs.length===0&&<p className="empty">Empieza con el dato que te resulte útil. No hace falta registrarlo todo.</p>}{[...logs].sort((a,b)=>b.date.localeCompare(a.date)).map(log=><article className="history-entry" key={log.id}><div><strong>{new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(parseDate(log.date))}</strong>{!hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p>{[log.weight===undefined?'':`Peso ${fmt(log.weight)} kg`,log.waist===undefined?'':`Cintura ${fmt(log.waist)} cm`,log.hip===undefined?'':`Cadera ${fmt(log.hip)} cm`].filter(Boolean).join(' · ')}</p>}{log.hipThrustKg!==undefined&&<p>Hip thrust: <b>{fmt(log.hipThrustKg)} kg{log.hipThrustReps?` × ${log.hipThrustReps}`:''}</b></p>}{(log.energy!==undefined||log.sleep!==undefined)&&<p>{[log.energy===undefined?'':`Energía del día: ${energyLabels[log.energy-1]??log.energy} (${log.energy}/5)`,log.sleep===undefined?'':`Sueño: ${fmt(log.sleep)} h`].filter(Boolean).join(' · ')}</p>}{hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p className="small-note">Peso y medidas ocultos</p>}{log.notes&&<p className="entry-notes">{log.notes}</p>}</div><div className="button-row"><button className="secondary" disabled={busy} onClick={()=>edit(log)}>Editar</button><button className="text-button" disabled={busy} onClick={async()=>{if(!confirm(`¿Eliminar el registro del ${shortDate(log.date)}? Se recalcularán sus gráficas y podrás deshacerlo.`))return;setBusy(true);try{await account.remove(`progress:${log.id}`);setDeleted(log);if(form.id===log.id){setForm(emptyProgress());setOpen(false)}notify('Registro eliminado. Puedes deshacerlo.')}catch{notify('No se pudo eliminar. Comprueba la conexión y reintenta.')}finally{setBusy(false)}}}>Eliminar</button></div></article>)}{deleted&&<div className="undo-strip"><span>Registro eliminado · {shortDate(deleted.date)}{logs.some(log=>log.date===deleted.date)&&' · Ya hay otro registro de esta fecha; revísalo antes de recuperar este.'}</span><button className="secondary" disabled={busy||logs.some(log=>log.date===deleted.date)} onClick={async()=>{setBusy(true);try{account.set(`progress:${deleted.id}`,deleted);await account.flush();setDeleted(null);notify('Registro recuperado.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setBusy(false)}}}>Deshacer</button></div>}</section>
     <section className="card progress-goal"><details><summary>Mi objetivo personal</summary><label>¿Qué te gustaría conseguir?<input maxLength={500} value={goal} onChange={e=>setGoal(e.target.value)} placeholder="Por ejemplo, mejorar mi hip thrust con buena técnica"/></label><p className="small-note">Se guarda en tu cuenta. Puedes cambiarlo cuando quieras.</p></details></section>
   </>

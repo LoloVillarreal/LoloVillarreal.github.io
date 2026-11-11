@@ -64,3 +64,22 @@
   .progress-entry fieldset { padding: 15px 12px; }
   .energy-scale { gap: 4px; }
 }
+
+.attendance-summary .week-count{margin:6px 0 12px;color:var(--text)}
+.week-count strong,.strength-latest strong,.strength-metrics .metric strong{font-variant-numeric:tabular-nums}
+.progress-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:0;margin:0;list-style:none}
+.progress-week li{display:grid;justify-items:center;gap:2px;padding:5px 0;background:var(--surface2);border-radius:10px;color:var(--text);line-height:1.15}
+.progress-week li small,.progress-week li span{font-size:.7rem}
+.progress-week li[aria-current=date]{outline:1px solid var(--olive);outline-offset:-1px}
+.progress-week li[data-trained]{background:var(--olive);color:var(--on-accent,#fff)}
+.attendance-history,.strength-snapshot details{margin-top:12px}
+.attendance-history summary,.strength-snapshot summary{min-height:44px;align-content:center}
+.strength-snapshot .section-head{flex-wrap:wrap}
+.strength-snapshot .text-button{display:flex;align-items:center;gap:5px;min-height:44px}
+.strength-snapshot .strength-latest{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;line-height:1.2;color:var(--text);margin:4px 0}
+.strength-latest strong{font-size:clamp(1.85rem,7vw,2.6rem);line-height:1.12;letter-spacing:-.04em}
+.strength-latest span,.strength-snapshot time{font-size:.84rem;color:var(--muted)}
+.strength-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.strength-metrics .metric{padding:12px;box-shadow:none;background:var(--surface2)}
+.strength-metrics .metric strong{font-size:1.2rem}
+@media(min-width:760px){.workspace--progress>.attendance-summary,.workspace--progress>.strength-snapshot{grid-column:auto}}

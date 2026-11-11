@@ -1,0 +1,26 @@
+.today-replacement ul { list-style: none; padding: 0; margin: 12px 0 0; }
+.today-replacement li { padding: 8px 0; border-top: 1px solid var(--line); }
+.replacement-option { display: flex; gap: 10px; align-items: center; }
+.replacement-select { display: flex; flex: 1; align-items: center; gap: 10px; justify-content: space-between; background: none; border: 0; padding: 4px 0; min-height: 44px; color: var(--text); text-align: left; }
+.replacement-select span { display: grid; gap: 4px; }
+.replacement-select small { color: var(--muted); }
+.replacement-select b { color: var(--olive); }
+
+.training-session{min-width:0;width:100%;max-width:680px;margin-inline:auto}
+.training-session-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.training-session-nav button,.training-session-previous{display:inline-flex;align-items:center;gap:5px;min-height:44px}
+.training-session-nav span{font-size:.8rem;color:var(--muted);text-align:right}
+.training-session-card{padding:16px}
+.training-session-dose{display:grid;gap:4px;margin:16px 0 8px;padding:12px;border-radius:12px;background:var(--surface2)}
+.training-session-dose strong{font-size:1.05rem;line-height:1.4}
+.training-session-dose span{font-size:.88rem;color:var(--muted);line-height:1.45}
+.training-session .session-details{border-bottom:1px solid var(--line);margin:0;padding:0}
+.training-session .session-details summary{display:list-item;align-content:center;min-height:46px;cursor:pointer}
+.training-session .today-replacement{padding:0;border-bottom:1px solid var(--line)}
+.training-session .today-replacement:empty{display:none}
+.training-session .today-replacement>.secondary{border:0;box-shadow:none;background:none;color:var(--text);margin:0;min-height:46px;padding:4px 0;text-align:left}
+.training-session-next{margin-top:16px;min-height:50px}
+.training-session .attendance-control{margin:12px 0 0;padding:0;border:0;background:transparent;box-shadow:none}
+.training-session .rest-timer{margin:0 0 12px;padding:12px;border-radius:12px;box-shadow:none}
+.training-session .guided-top h2:focus{outline:0}
+.training-session-previous{margin-top:4px}

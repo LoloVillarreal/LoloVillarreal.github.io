@@ -1,11 +1,10 @@
 import { techniqueFor } from './lib/exercise-technique'
-import ExercisePhoto, { ExerciseAlternatives } from './ExercisePhoto'
-import { exerciseImage, exerciseUnit } from './lib/exercise-library'
-import { useEffect, useState, type SetStateAction } from 'react'
+import ExercisePhoto from './ExercisePhoto'
+import { exerciseUnit } from './lib/exercise-library'
+import { useEffect, useRef, useState, type SetStateAction } from 'react'
 import { Apple, ArrowLeft, Calculator, ChevronRight, Heart, Play, Salad } from 'lucide-react'
 import { workoutDays, twelveWeekPlan, hevyExport } from './data/training'
 import { foods, menu } from './data/nutrition'
-import hevyCatalog from './data/hevy-catalog.json'
 import { tips } from './data/tips'
 import { bmi, carbsForCalories, dayNutrients, hipThrustProgress, macroCalories, maintenanceRange, mifflin, movingAverage } from './lib/calculations'
 import { backupJson, download, progressCsv } from './lib/files'
@@ -14,12 +13,15 @@ import { useStorage, useStored } from './lib/storage'
 import { AccountGate, AccountPanel, useAccount, useCloudValue } from './lib/account'
 import { addDays, isoDate, parseDate, shortDate, validDate, weekDates } from './lib/dates'
 import type { AppSettings, Backup, CalculatorProfile, Exercise, NavSection, ProgressDraft, ProgressLog, WorkoutDay, WorkoutLog } from './types'
+import type { GuidePosition } from './lib/guide-position'
+import { attendanceEntryValid } from './lib/attendance'
+import TodayReplacement from './TodayReplacement'
 import { TrainingPlanner } from './TrainingPlanner'
 import { LoveNote } from './LoveNote'
 import { planFromRoutine, trainingEntryValid, workoutForDate, type TrainingPlan } from './lib/training-plan'
 import { currentTheme, themes } from './lib/appearance'
 import { RestTimer } from './RestTimer'
-import { AttendanceSummary } from './ProgressScreen'
+import './daily-simple.css'
 import { TrainingCalendar, AttendanceControl } from './TrainingCalendar'
 export { ProgressScreen } from './ProgressScreen'
 
@@ -32,18 +34,49 @@ const failure='No se ha podido guardar. Tus cambios siguen en pantalla; reintent
 function Metric({label,value,sub}:{label:string;value:string;sub:string}){return <article className="metric"><p>{label}</p><strong>{value}</strong><small>{sub}</small></article>}
 function Empty({text}:{text:string}){return <p className="empty">{text}</p>}
 
-export function HomeScreen({go,reader,startTraining}:{go:(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>void;reader:{date:string;index:number}|null;startTraining:(date:string,index?:number)=>void}){
+export function HomeScreen({go,reader,startTraining,onStrength}:{onStrength:()=>void;go:(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>void;reader:{date:string;index:number}|null;startTraining:(date:string,index?:number)=>void}){
   const account=useAccount(),today=isoDate(),saved=account.values[`training:${today}`]
   const day=workoutForDate(today,trainingEntryValid(`training:${today}`,saved)?saved:undefined)
+  const attendanceKey = 'attendance:' + today
+  const trainedToday = attendanceEntryValid(attendanceKey, account.values[attendanceKey])
+  const resumeToday = reader?.date === today && !trainedToday
+  const resumeIndex = resumeToday ? Math.min(reader.index, Math.max(0, day.exercises.length - 1)) : 0
+  const guideLabel = resumeToday && day.exercises.length
+    ? `Continuar · ejercicio ${resumeIndex + 1} de ${day.exercises.length}`
+    : resumeToday ? 'Continuar sesión' : trainedToday ? 'Volver a ver los ejercicios'
+    : day.type === 'strength' ? 'Empezar entrenamiento' : day.type === 'cardio' ? 'Empezar cardio' : 'Ver descanso de hoy'
   const [week,setWeek]=useStored('guideWeek',1)
   const phase=twelveWeekPlan.find(x=>{const [first,last]=x.weeks.split('–').map(Number);return week>=first&&week<=(last??first)})!
-  return <>
-    <section className="hero-card home-today"><div><p className="eyebrow">HOY · {dateLabel(today)}</p><h2>{day.title}</h2><p>{day.objective}</p><div className="info-strip"><span>{day.optional?'Opcional':day.type==='cardio'?'Solo cardio':day.type==='recovery'?'Recuperación':`${day.exercises.length} ejercicios`}</span><span>{trainingEntryValid(`training:${today}`,saved)?'Elegido por ti':'Plan recomendado'}</span></div></div><div className="home-actions"><button className="primary" disabled={!!account.session&&account.loading} onClick={()=>startTraining(today,reader?.date===today?reader.index:0)}><Play size={17}/>{reader?.date===today?'Continuar entrenamiento':day.type==='strength'?'Ver guía de ejercicios':'Abrir guía de hoy'}</button><button className="text-button" onClick={()=>go('training',today)}>Ver o cambiar la rutina<ChevronRight size={16}/></button></div></section>
-    {reader&&reader.date!==today&&<section className="card resume-card"><div><p className="eyebrow">TU GUÍA SIGUE ABIERTA</p><h2>Retoma donde lo dejaste</h2><p>{shortDate(reader.date)}</p></div><button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>Continuar sesión<ChevronRight size={17}/></button></section>}
-    <AttendanceSummary compact onTraining={()=>go('training',today)}/>
-    <div className="guide-links"><button onClick={()=>go('nutrition')}><Calculator/><strong>Herramientas</strong><span>Descansos, cargas y fichas de ejercicios</span><ChevronRight/></button><button onClick={()=>go('progress')}><Heart/><strong>Mi evolución</strong><span>Medidas, energía e hip thrust</span><ChevronRight/></button><button onClick={()=>go('nutrition',undefined,'calc')}><Calculator/><strong>Calculadoras</strong><span>Estimaciones con tus propios datos</span><ChevronRight/></button></div>
-    <section className="card home-plan"><div className="section-head"><div><p className="eyebrow">TU CAMINO · SEMANA {week} DE 12</p><h2>{phase.name}</h2></div><Heart size={25}/></div><p>{phase.guidance}</p><details><summary>Ver mi objetivo y ajustar la semana</summary><p>Construir fuerza en glúteos y piernas, trabajar el core y mantener el equilibrio con tren superior y recuperación.</p><label>Semana del plan<select value={week} onChange={e=>setWeek(+e.target.value)}>{Array.from({length:12},(_,i)=><option key={i} value={i+1}>Semana {i+1}</option>)}</select></label><p className="small-note">Elige la semana que estés siguiendo; no es un contador de sesiones completadas.</p></details></section>
-  </>
+  const trainingDays = weekDates(today).filter(date => date <= today && attendanceEntryValid('attendance:' + date, account.values['attendance:' + date])).length
+  const daySummary = day.type === 'strength' ? `${day.exercises.length} ejercicios` : day.objective
+  return <div className="simple-day-home">
+    <section className="card home-today simple-day-intro">
+      <p className="day-date">{dateLabel(today)}</p>
+      <h2>{day.title}</h2>
+      {trainedToday && <p className="day-confirmation" role="status">✓ Entrenamiento registrado</p>}
+      <p>{daySummary}{day.optional ? ' · Opcional' : ''}</p>
+      <div className="home-actions">
+        <button className="primary full" disabled={account.loading || (day.type === 'strength' && !day.exercises.length)}
+          onClick={() => startTraining(today,resumeIndex)}><Play size={17}/>{guideLabel}</button>
+        <button className="text-button" onClick={() => go('training',today)}>Ver el plan de hoy<ChevronRight size={16}/></button>
+        {trainedToday && <button className="text-button" onClick={onStrength}>Anotar mi marca de hip thrust<ChevronRight size={16}/></button>}
+      </div>
+    </section>
+    {reader && reader.date !== today && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
+      Continuar la sesión del {shortDate(reader.date)}<ChevronRight size={16}/>
+    </button>}
+    <div className="card simple-day-links">
+      <button onClick={()=>go('progress')}><span><strong>Mi progreso</strong><small>{account.loading?'Cargando…':account.error?'Consultar mis registros':`${trainingDays} ${trainingDays===1?'día entrenado':'días entrenados'} esta semana`}</small></span><ChevronRight size={18}/></button>
+      <details>
+        <summary>Mi plan de 12 semanas · semana {week}</summary>
+        <h3>{phase.name}</h3><p>{phase.guidance}</p>
+        <label>Semana que estoy siguiendo<select value={week} onChange={e=>setWeek(+e.target.value)}>
+          {Array.from({length:12},(_,i)=><option key={i} value={i+1}>Semana {i+1}</option>)}
+        </select></label>
+      </details>
+      <a href="#prueba-gimnasio">Practicar con un ejemplo<ChevronRight size={16}/></a>
+    </div>
+  </div>
 }
 
 export function MoreScreen({tab,setTab,settings,saveSettings,legacyAvailable,notify}:{tab:'calc'|'tips'|'settings';setTab:(tab:'calc'|'tips'|'settings')=>void;settings:AppSettings;saveSettings:Setter<AppSettings>;legacyAvailable:boolean;notify:Notify}){
@@ -85,9 +118,10 @@ function SettingsScreen({settings,saveSettings,legacyAvailable,notify}:{settings
   </>
 }
 
-export function TrainingScreen({date,setDate,notify,reader,setReader,onDirtyChange}:{date:string;setDate:(date:string)=>void;notify:Notify;reader:{date:string;index:number}|null;setReader:Setter<{date:string;index:number}|null>;onDirtyChange:(dirty:boolean)=>void}){
+export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,finish,onDirtyChange}:{date:string;setDate:(date:string)=>void;notify:Notify;reader:GuidePosition|null;bookmark:GuidePosition|null;setReader:(position:GuidePosition|null)=>void;finish:(date:string)=>void;onDirtyChange:(dirty:boolean)=>void}){
   const account=useAccount(),[editing,setEditing]=useState(false),[removing,setRemoving]=useState(false),[deletedPlan,setDeletedPlan]=useState<TrainingPlan|null>(null)
   useEffect(()=>setDeletedPlan(null),[date,account.session?.user.id])
+  const [recentRegistration,setRecentRegistration]=useState<string|null>(null)
   const saved=account.values[`training:${date}`],hasPlan=trainingEntryValid(`training:${date}`,saved)
   const selected=workoutForDate(date,hasPlan?saved:undefined)
   useEffect(()=>{window.scrollTo(0,0)},[editing,reader?.date,reader?.index])
@@ -102,12 +136,45 @@ export function TrainingScreen({date,setDate,notify,reader,setReader,onDirtyChan
   }
   if(account.session&&account.loading)return <><TrainingCalendar date={date} onChange={setDate}/><section className="card" role="status"><p>Recuperando tu entrenamiento…</p></section></>
   if(editing)return <>{!account.session&&<button className="text-button" onClick={()=>setEditing(false)}>Volver al resumen</button>}<AccountGate><TrainingPlanner key={`${account.session?.user.id}:${date}`} date={date} initial={hasPlan?saved:planFromRoutine(selected)} onDirtyChange={onDirtyChange} onCancel={()=>setEditing(false)} onSaved={start=>{setEditing(false);if(start)setReader({date,index:0});notify('Entrenamiento guardado en tu cuenta.')}}/></AccountGate></>
-  if(reader?.date===date)return <><SessionView day={selected} date={date} index={reader.index} cardio={hasPlan?saved.cardio:undefined} onStep={index=>setReader({date,index})} onExit={closeGuide}/><AttendanceControl key={`${account.session?.user.id}:${date}`} date={date} day={selected} notify={notify}/></>
+  const resume = bookmark?.date === date ? Math.min(bookmark.index, Math.max(0, selected.exercises.length-1)) : 0
+  function confirmedRegistration() {
+    setRecentRegistration(date)
+    finish(date)
+    requestAnimationFrame(()=>{
+      const target=document.querySelector<HTMLElement>('.attendance-control')
+      target?.focus({preventScroll:true})
+      target?.scrollIntoView({block:'center'})
+    })
+  }
+  if(reader?.date===date)return <SessionView day={selected} date={date} index={reader.index}
+    cardio={hasPlan?saved.cardio:undefined} onStep={index=>setReader({date,index})}
+    onExit={()=>closeGuide('summary')} notify={notify} onRegistered={confirmedRegistration}/>
+
   return <>
-    <section tabIndex={-1} className="card session-intro training-overview"><p className="eyebrow">{hasPlan?'ELEGIDO POR TI':'PLAN RECOMENDADO'} · {dateLabel(date)}</p><h2>{selected.title}</h2><p>{selected.objective}</p><div className="info-strip"><span>{selected.optional?'Opcional':selected.type==='strength'?`${selected.exercises.length} ejercicios`:selected.type==='cardio'?'Sin fuerza':'Recuperación'}</span>{selected.type==='strength'&&<><span>Descansos incluidos</span><span>RIR 1–3</span></>}</div><div className="overview-actions"><button className="primary" disabled={selected.type==='strength'&&!selected.exercises.length} onClick={()=>setReader({date,index:0})}><Play size={17}/>{selected.type==='strength'?'Ver guía de ejercicios':'Abrir guía de hoy'}</button><button className="secondary" onClick={()=>setEditing(true)}>{selected.type==='strength'?'Editar entrenamiento':'Elegir entrenamiento'}</button></div></section>
-    <AttendanceControl key={`${account.session?.user.id}:${date}`} date={date} day={selected} notify={notify}/>
-    <TrainingCalendar date={date} onChange={setDate}/>
-    {selected.type==='strength'?<section className="card routine-preview"><div className="section-head"><div><p className="eyebrow">TU RUTINA, DE UN VISTAZO</p><h2>Ejercicios de hoy</h2></div><button className="text-button" onClick={()=>setEditing(true)}>Editar</button></div>{selected.exercises.length===0&&<p className="empty">Añade ejercicios desde Editar selección para preparar tu sesión.</p>}{selected.exercises.map((exercise,index)=><div key={exercise.id} className="routine-preview-row"><ExercisePhoto exercise={exercise}/><button className="routine-preview-open" onClick={()=>setReader({date,index})}><span><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exerciseUnit(exercise)}</small></span><ChevronRight size={18}/></button></div>)}<details><summary>Antes de empezar</summary><p>Dedica unos minutos a moverte y realiza series de aproximación antes de las cargas de trabajo. Sigue el orden propuesto y ajusta el esfuerzo a tus sensaciones.</p><p className="small-note">RIR = repeticiones que podrías hacer todavía antes del fallo. Las series de calentamiento no cuentan como series de trabajo.</p></details></section>:<NonStrengthGuide day={selected} cardio={hasPlan?saved.cardio:undefined}/>}
+    <section tabIndex={-1} className="card training-overview simple-day-intro">
+      <p className="day-date">{dateLabel(date)}</p>
+      <h2>{selected.title}</h2>
+      <p>{selected.type==='strength' ? `${selected.exercises.length} ejercicios` : selected.objective}{selected.optional?' · Opcional':''}</p>
+      <div className="overview-actions">
+        <button className="primary" disabled={selected.type==='strength'&&!selected.exercises.length} onClick={()=>setReader({date,index:resume})}>
+          <Play size={17}/>{bookmark?.date===date?'Continuar sesión':selected.type==='strength'?'Empezar entrenamiento':selected.type==='cardio'?'Empezar cardio':'Ver la guía de descanso'}
+        </button>
+        <button className="text-button" onClick={()=>setEditing(true)}>Editar el plan de este día</button>
+      </div>
+    </section>
+    <div className="simple-day-register"><AttendanceControl key={`${account.session?.user.id}:${date}`} date={date} day={selected} notify={notify} onRegistered={confirmedRegistration} recent={recentRegistration===date}/></div>
+    <details className="card simple-day-calendar"><summary>Cambiar de día o ver el calendario</summary>
+      <TrainingCalendar date={date} onChange={setDate}/>
+    </details>
+    {selected.type==='strength' ? <section className="card routine-preview">
+      <h2>Ejercicios del día</h2>
+      {selected.exercises.length===0&&<p className="empty">Edita el plan de este día para añadir un ejercicio.</p>}
+      {selected.exercises.map((exercise,index)=><div key={exercise.id} className="routine-preview-row">
+        <ExercisePhoto exercise={exercise}/>
+        <button className="routine-preview-open" onClick={()=>setReader({date,index})}><span><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exerciseUnit(exercise)}</small></span><ChevronRight size={18}/></button>
+      </div>)}
+      <details><summary>Antes de empezar</summary><p>Dedica unos minutos a moverte y realiza series de aproximación antes de las cargas de trabajo.</p><p className="small-note">RIR indica cuántas repeticiones más crees que podrías hacer con buena técnica.</p></details>
+    </section> : null}
     {(hasPlan||deletedPlan)&&<section className="card plan-management"><p className="small-note">La planificación y los días entrenados se guardan por separado.</p>{hasPlan&&<button className="text-button" disabled={removing||account.saving||!navigator.onLine} onClick={async()=>{if(!confirm('¿Borrar la planificación de este día? Su marca de entrenado y tus medidas se conservarán.'))return;setRemoving(true);const previous=saved;try{await account.remove(`training:${date}`);setDeletedPlan(previous);notify('Planificación eliminada. Puedes deshacerlo.')}catch{notify('No se pudo borrar. Comprueba la conexión y reintenta.')}finally{setRemoving(false)}}}>Borrar planificación del día</button>}{deletedPlan&&<div className="undo-strip"><span>Planificación eliminada</span><button className="secondary" disabled={removing||account.saving||hasPlan||!navigator.onLine} onClick={async()=>{setRemoving(true);try{account.set(`training:${date}`,deletedPlan);await account.flush();setDeletedPlan(null);notify('Planificación recuperada.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setRemoving(false)}}}>Deshacer</button></div>}</section>}
     <section className="card"><details><summary>Cómo avanzar durante las 12 semanas</summary>{twelveWeekPlan.map(x=><div className="phase" key={x.weeks}><b>Semanas {x.weeks}</b><div><strong>{x.name}</strong><p>{x.guidance}</p></div></div>)}</details><p className="small-note">Consulta las fichas durante el entreno y registra tu evolución en Progreso cuando te resulte útil.</p></section>
     <p className="source-note">Fichas e imágenes del catálogo estándar de <a href="https://www.hevyapp.com/" target="_blank" rel="noreferrer">Hevy</a>, consultado para esta guía. No hay sincronización con cuentas.</p>
@@ -118,14 +185,57 @@ function NonStrengthGuide({day,cardio}:{day:WorkoutDay;cardio?:{activity:string;
   return day.type==='cardio'?<section className="card cardio-guide"><span className="illustrated-symbol">🚶‍♀️</span><h2>Muévete a un ritmo cómodo</h2><p>{cardio?`Tu selección: ${cardio.minutes} minutos de ${cardio.activity.toLocaleLowerCase('es')}, ajustados a tus sensaciones.`:'Referencia de la sesión: 25–45 minutos de caminata, bicicleta o elíptica, adaptados a tu recuperación.'}</p><ul><li>Empieza suave y aumenta gradualmente.</li><li>Un ritmo moderado permite hablar sin quedarte sin aire.</li><li>Termina bajando el ritmo.</li></ul><div className="goal-callout"><strong>Objetivo de hoy</strong><p>Actividad cardiovascular y recuperación.{day.day===3?' El miércoles es exclusivamente de cardio':''}</p></div></section>:<section className="card cardio-guide"><span className="illustrated-symbol">🌿</span><h2>Recuperar también es avanzar</h2><p>Descansar, caminar si te apetece o hacer movilidad suave. Sin fuerza programada ni un objetivo rígido de pasos.</p></section>
 }
 
-function SessionView({day,date,index,cardio,onStep,onExit}:{day:WorkoutDay;date:string;index:number;cardio?:{activity:string;minutes:number};onStep:(index:number)=>void;onExit:(destination:'summary'|'registration')=>void}){
-  const step=Math.max(0,Math.min(index,day.exercises.length-1)),exercise=day.exercises[step]
-  return <><section className="card session-focus-heading"><button className="text-button" onClick={()=>onExit('summary')}><ArrowLeft size={16}/>Resumen de la rutina</button><p className="eyebrow">{shortDate(date)} · {day.optional?'OPCIONAL':'TU GUÍA EN EL GIMNASIO'}</p><h2>{day.title}</h2>{exercise&&<><div className="session-step-label"><span>Ejercicio {step+1} de {day.exercises.length}</span><span>{exercise.muscle}</span></div><div className="session-position" role="progressbar" aria-label="Posición en la guía" aria-valuemin={1} aria-valuemax={day.exercises.length} aria-valuenow={step+1}><span style={{width:`${(step+1)/day.exercises.length*100}%`}}/></div>{step===0&&<details className="session-warmup"><summary>Preparación antes de empezar</summary><p>Dedica unos minutos a moverte y realiza series de aproximación antes de las cargas de trabajo. Ajusta el esfuerzo a tus sensaciones.</p></details>}</>}</section>{exercise?<><ExerciseGuide exercise={exercise} index={step}/>{exercise.rest[1]>0&&<RestTimer key={`${date}:${exercise.id}`} seconds={exercise.rest[1]}/>}</>:<NonStrengthGuide day={day} cardio={cardio}/>}<section className="card session-controls">{exercise&&<button className="secondary" disabled={step===0} onClick={()=>onStep(step-1)}><ArrowLeft size={16}/>Anterior</button>}<button className="primary" onClick={()=>exercise&&step<day.exercises.length-1?onStep(step+1):onExit('registration')}>{exercise&&step<day.exercises.length-1?'Siguiente ejercicio':'Ir al registro del entrenamiento'}<ChevronRight size={17}/></button><p className="small-note">Al terminar, registra el entrenamiento para que aparezca en el calendario y en Progreso.</p></section></>
+function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{day:WorkoutDay;date:string;index:number;cardio?:{activity:string;minutes:number};onStep:(index:number)=>void;onExit:()=>void;notify:Notify;onRegistered:()=>void}) {
+  const count=day.exercises.length
+  const step=Math.max(0,Math.min(index,count-1))
+  const exercise=day.exercises[step]
+  const page=useRef<HTMLElement>(null)
+  useEffect(()=>{
+    const heading=page.current?.querySelector<HTMLElement>('[data-exercise-title]')
+    heading?.focus({preventScroll:true})
+  },[date,step])
+  return <section className="training-session" ref={page} aria-label={day.title}>
+    <header className="training-session-nav">
+      <button className="text-button" onClick={onExit}><ArrowLeft size={16}/>Volver a la rutina</button>
+      {exercise&&<span>Ejercicio {step+1} de {count}</span>}
+    </header>
+    {exercise?<div className="card training-session-card">
+      <ExerciseGuide exercise={exercise}/>
+      <TodayReplacement date={date} exercise={exercise} index={step}/>
+      {exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
+        <summary>Medir el descanso</summary>
+        <RestTimer seconds={exercise.rest[1]}/>
+      </details>}
+      {step<count-1?
+        <button className="primary full training-session-next" onClick={()=>onStep(step+1)}>Siguiente ejercicio<ChevronRight size={17}/></button>:
+        <AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
+      {step>0&&<button className="text-button training-session-previous" onClick={()=>onStep(step-1)}><ArrowLeft size={16}/>Ejercicio anterior</button>}
+    </div>:<>
+      <NonStrengthGuide day={day} cardio={cardio}/>
+      <AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>
+    </>}
+  </section>
 }
 
-function ExerciseGuide({exercise,index}:{exercise:Exercise;index:number}){
-  const template=(hevyCatalog as Record<string,{title:string}>)[exercise.hevyId]
-  return <article className="card exercise-guide"><div className="exercise-guide-heading"><span className="exercise-number">{String(index+1).padStart(2,'0')}</span><div><p className="eyebrow">{exercise.muscle}</p><h2>{exercise.name}</h2></div></div><div className="exercise-visual"><img src={exerciseImage(exercise)} onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src='./exercise-placeholder.svg'}} alt={`Referencia visual de ${exercise.name}`} loading={index<2?'eager':'lazy'} width="432" height="432"/></div><div className="prescription"><div><span>Series</span><strong>{exercise.sets}</strong></div><div><span>{exercise.unit==='seconds'?'Segundos':exercise.unit==='meters'?'Metros':'Repeticiones'}</span><strong>{exercise.reps.join('–')}</strong></div><div><span>Descanso</span><strong>{exercise.rest[0]===exercise.rest[1]?exercise.rest[0]:exercise.rest.join('–')} s</strong></div></div>{exercise.perSide&&<p className="small-note">Realiza las repeticiones o el tiempo indicado por cada lado.</p>}<h3>Cómo hacerlo</h3><p>{techniqueFor(exercise).text}</p>{exercise.avoid&&<p className="warning">{exercise.avoid}</p>}{exercise.alternatives.length>0&&<div className="alternative-box"><h3>Si necesitas una alternativa</h3><ExerciseAlternatives names={exercise.alternatives}/><p className="small-note">Elige una variante con el mismo patrón y un recorrido que controles; ajusta la carga al cambiar de ejercicio.</p></div>}<details><summary>Esfuerzo y recomendación</summary><p>{exercise.unit==='seconds'?'Mantén la alineación y respira con normalidad; termina la serie si pierdes el control de la postura.':`Deja aproximadamente ${exercise.rir.join('–')} repeticiones en reserva.`}</p><p>{exercise.progression??'Prioriza el control. Cuando el extremo alto del rango resulte consistente, aumenta la carga mínima disponible o mejora la ejecución.'}</p><p className="small-note">Referencia Hevy: {template?.title??exercise.hevyName} · {exercise.hevyId}</p></details></article>
+function ExerciseGuide({exercise}:{exercise:Exercise}) {
+  const amount=exercise.reps[0]===exercise.reps[1]?String(exercise.reps[0]):exercise.reps.join('–')
+  const unit=exercise.unit==='seconds'?'segundos':exercise.unit==='meters'?'metros':'repeticiones'
+  const rest=exercise.rest[0]===exercise.rest[1]?String(exercise.rest[0]):exercise.rest.join('–')
+  return <>
+    <div className="guided-top">
+      <div className="guided-photo"><ExercisePhoto exercise={exercise}/></div>
+      <div><h2 data-exercise-title tabIndex={-1}>{exercise.name}</h2><span className="small-note">{exercise.muscle}</span></div>
+    </div>
+    <div className="training-session-dose">
+      <strong>Haz {exercise.sets} {exercise.sets===1?'serie':'series'} de {amount} {unit}{exercise.perSide?' por lado':''}.</strong>
+      {exercise.rest[1]>0&&<span>Descansa {rest} segundos entre series.</span>}
+    </div>
+    <details key={exercise.id} className="session-details">
+      <summary>Cómo hacerlo</summary>
+      <p>{techniqueFor(exercise).text}</p>
+      {exercise.avoid&&<p className="warning">{exercise.avoid}</p>}
+    </details>
+  </>
 }
 
 type FoodCategory='breakfast'|'lunch'|'dinner'|'snack'

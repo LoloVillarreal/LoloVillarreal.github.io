@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type SetStateAction } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
 import config from '../data/cloud-config.json'
+import { attendanceEntryValid } from './attendance'
 import { readAccountPages } from './account-pages'
 import { defaultSettings } from './db'
 import type { Backup, ProgressLog } from '../types'
@@ -88,10 +89,22 @@ export function AccountProvider({children}:{children:ReactNode}){
         const revision=versions.current.get(key),version=revision?.version
         const row={user_id:user,key,value:{data:value},version:(version??0)+1,updated_at:new Date().toISOString()}
         const result=version===undefined?await supabase.from('plan_data').insert(row).select('version,updated_at'):await supabase.from('plan_data').update(row).eq('user_id',user).eq('key',key).eq('version',version).eq('updated_at',revision!.updated_at).select('version,updated_at')
-        if(result.error){if(result.error.code==='23505')throw new Error(conflict);throw new Error('No se ha podido sincronizar. Mantén esta página abierta, comprueba la conexión y reintenta.')}
-        if(result.data.length!==1)throw new Error(conflict)
+        let confirmed=result.data?.length===1 ? result.data[0] : null
+        if(result.error?.code==='23505' && version===undefined && attendanceEntryValid(key,value)){
+          // A previous insert may have committed before its response was lost.
+          const stored=await supabase.from('plan_data').select('version,updated_at,value').eq('user_id',user).eq('key',key).maybeSingle()
+          if(stored.error)throw new Error('No se pudo comprobar el registro. Reintenta al recuperar la conexión.')
+          const record=stored.data?.value?.data
+          if(stored.data && attendanceEntryValid(key,record) && record.completedAt===value.completedAt &&
+            record.title===value.title && record.type===value.type)confirmed=stored.data
+          else throw new Error(conflict)
+        }else if(result.error){
+          if(result.error.code==='23505')throw new Error(conflict)
+          throw new Error('No se ha podido sincronizar. Mantén esta página abierta, comprueba la conexión y reintenta.')
+        }
+        if(!confirmed)throw new Error(conflict)
         if(owner.current!==user)return
-        versions.current.set(key,result.data[0])
+        versions.current.set(key,{version:confirmed.version,updated_at:confirmed.updated_at})
         if(pending.current.get(key)===value)pending.current.delete(key)
       }
       setError('')
@@ -172,7 +185,7 @@ export function loginErrorMessage(error:{code?:string;status?:number},online:boo
   return 'No se pudo completar el acceso. Si se repite, pide a Lolo que revise la cuenta.'
 }
 
-export function AccountPanel(){
+export function AccountPanel({practice=false}:{practice?:boolean}={}){
   const account=useAccount()
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
   const submit=async(e:React.FormEvent)=>{
@@ -188,7 +201,7 @@ export function AccountPanel(){
   }
   if(!account.session&&account.loading)return <section className="card account-panel" role="status"><p>Recuperando tu sesión…</p></section>
   if(account.session)return <section className="card account-panel"><p className="eyebrow">TU CUENTA PRIVADA</p><h2>Tu progreso, contigo</h2><p>{account.session.user.email}</p><p className="small-note">Tu sesión se mantiene en este navegador hasta que cierres sesión o se borren sus datos. En otro dispositivo, entra con esta misma cuenta para recuperar tu progreso.</p><div className="button-row"><button className="secondary" disabled={account.saving} onClick={()=>account.refresh().catch(()=>setMessage('No se pudo actualizar.'))}>Actualizar datos</button><button className="text-button" disabled={account.saving} onClick={()=>account.logout().catch(()=>setMessage('Guarda o exporta tus cambios antes de salir.'))}>Cerrar sesión</button></div>{message&&<p role="status">{message}</p>}</section>
-  return <section className="card account-panel"><p className="eyebrow">GUARDADO PRIVADO EN LA NUBE</p><h2>Un acceso para los dos</h2><p>Inicia sesión con la cuenta de Alexia para abrir entrenamiento y Policía. Tus registros se guardan en la nube y la sesión se recuerda en este navegador.</p><form onSubmit={submit}><label>Correo electrónico<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Entrar'}</button></form><details><summary>Cómo entrar por primera vez</summary><p>Usa el correo y la contraseña de la cuenta que habéis creado para este plan. Es independiente de Hevy. Si necesitas recuperar el acceso, Lolo puede restablecerlo desde el panel privado.</p></details>{message&&<p role="status">{message}</p>}</section>
+  return <section className="card account-panel"><h2>Iniciar sesión</h2><p>{practice?'Usa la cuenta habitual de Alexia para abrir la práctica de tres ejercicios.':'Usa el correo y la contraseña del plan de Alexia. Este navegador recordará tu sesión.'}</p><form onSubmit={submit}><label>Correo electrónico<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Entrar'}</button></form><details><summary>Cómo entrar por primera vez</summary><p>Usa el correo y la contraseña de la cuenta que habéis creado para este plan. Es independiente de Hevy. Si necesitas recuperar el acceso, Lolo puede restablecerlo desde el panel privado.</p></details>{message&&<p role="status">{message}</p>}</section>
 }
 
 export function AccountGate({children}:{children:ReactNode}){

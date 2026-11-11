@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useGuidePosition } from './lib/guide-position'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Check, Dumbbell, Home, Moon, RefreshCw, Wrench, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
@@ -35,7 +36,8 @@ function Workspace(){
   const [online,setOnline]=useState(navigator.onLine)
   const [toast,notify]=useState('')
   const [trainingDirty,setTrainingDirty]=useState(false)
-  const [reader,setReader]=useState<{date:string;index:number}|null>(null)
+  const [progressIntent,setProgressIntent]=useState<'strength'>()
+  const {reader,bookmark,setReader,finish}=useGuidePosition(account.session?.user.id)
   const [registration,setRegistration]=useState<ServiceWorkerRegistration>()
   const [policeUpdateBlocked,setPoliceUpdateBlocked]=useState(false)
   const [cacheReady,setCacheReady]=useState(false)
@@ -72,7 +74,6 @@ function Workspace(){
     document.documentElement.dataset.theme=theme
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='glass'?'#ffffff':theme==='dark'?'#18221e':'#f8f6f1')
   },[theme])
-  useEffect(()=>setReader(null),[account.session?.user.id])
   useEffect(()=>{window.scrollTo(0,0)},[navigation.section])
   useEffect(()=>{
     const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day&&!trainingDirty)setNavigation(v=>({...v,day,section:'home',trainingDate:day,nutritionDate:day}))}
@@ -84,12 +85,14 @@ function Workspace(){
   useEffect(()=>{if(toast){const id=setTimeout(()=>notify(''),4500);return()=>clearTimeout(id)}},[toast])
   const go=(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>{
     if(trainingDirty&&(section!==navigation.section||(date&&date!==navigation.trainingDate)||(tab&&tab!==navigation.tab))&&!confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?'))return false
+    setProgressIntent(undefined)
+    if(section==='training'&&date&&reader)setReader(null)
     setNavigation(v=>({...v,section:tab==='calc'?'nutrition':section,tool:tab==='calc'?'calc':'',...(date?{trainingDate:date}:{}),...(tab?{tab:tab==='calc'?'settings':tab}:{})}));return true
   }
   const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   const themeControl=<button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button>
-  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="eyebrow">PLAN Lolo & alexia</p><h1>Vuestro espacio</h1></div>{themeControl}</header><AccountPanel/></div>
+  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="eyebrow">PLAN Lolo & alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu plan'}</h1></div>{themeControl}</header><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
   const blockedUpdate=trainingDirty||policeUpdateBlocked||storage.saving||account.saving||!!storage.error||!!account.error
   const serviceNotice=<>
@@ -102,24 +105,24 @@ function Workspace(){
       }}>Actualizar</button>
     </div>}
   </>
-  if(route==='#prueba-gimnasio')return <Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id}/></Suspense>
+  if(route==='#prueba-gimnasio')return <Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id} onExit={()=>{setNavigation(v=>({...v,section:'home'}));location.hash=''}}/></Suspense>
   if(police)return <>{serviceNotice}{toast&&<p className="toast" role="status">{toast}</p>}<Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onUpdateBlockedChange={setPoliceUpdateBlocked} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense></>
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
   const section=legacyCalc?'nutrition':navigation.section
   const cacheMessage=cacheReady?'Guía disponible sin conexión':cacheError||!('serviceWorker' in navigator)?'Guía disponible con conexión':'Preparando la guía para usarla sin conexión…'
   return <div className="app-shell">
     {serviceNotice}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Tu guía',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
+    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Hoy',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>
     <main className={`workspace workspace--${section}`}>
-      {section==='home'&&<HomeScreen go={go} reader={reader} startTraining={startTraining}/>}
-      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} setReader={setReader} onDirtyChange={setTrainingDirty}/>}
+      {section==='home'&&<HomeScreen go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
+      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''} setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}
-      {section==='progress'&&<ProgressScreen hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
+      {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>{if(tab==='calc')go('nutrition',undefined,'calc');else setNavigation(v=>({...v,tab}))}} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     {toast&&<div className="toast" role="status">{toast}</div>}
-    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Guía',Home],['training','Entrenos',Dumbbell],['nutrition','Herramientas',Wrench],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
+    <nav className="bottom-nav" aria-label="Navegación principal">{([['home','Hoy',Home],['training','Entrenos',Dumbbell],['nutrition','Herramientas',Wrench],['progress','Progreso',TrendingUp],['more','Ajustes',Settings]] as const).map(([id,label,Icon])=><button key={id} onClick={()=>go(id,undefined,id==='more'?'settings':undefined)} className={id===section?'active':''} aria-current={id===section?'page':undefined}><span className="nav-icon"><Icon aria-hidden="true"/></span><span>{label}</span></button>)}</nav>
   </div>
 }
 

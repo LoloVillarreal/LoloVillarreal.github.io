@@ -56,27 +56,39 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   </section>
 }
 
-export function AttendanceControl({date,day,notify}:{date:string;day:WorkoutDay;notify:(message:string)=>void}){
+export function AttendanceControl({date,day,notify,finishGuide=false,recent=false,onRegistered}:{
+  date:string; day:WorkoutDay; notify:(message:string)=>void
+  finishGuide?:boolean; recent?:boolean; onRegistered?:()=>void
+}){
   const account=useAccount(),key=`attendance:${date}`,value=account.values[key],today=isoDate()
   const entry=attendanceEntryValid(key,value)?value:undefined
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[removed,setRemoved]=useState<Attendance|null>(null),[online,setOnline]=useState(()=>navigator.onLine)
-  const context=`${account.session?.user.id??''}:${date}`,contextRef=useRef(context);contextRef.current=context
+  const marking=useRef(false)
+  const context=`${account.session?.user.id??''}:${date}`,contextRef=useRef(context)
+  useEffect(()=>{contextRef.current=context;return()=>{contextRef.current=''}},[context])
   useEffect(()=>{setBusy(false);setError('');setRemoved(null)},[context])
   useEffect(()=>{const update=()=>setOnline(navigator.onLine);window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{window.removeEventListener('online',update);window.removeEventListener('offline',update)}},[])
   const disabled=busy||account.saving||!online
   const allowed=date<=today&&(day.type==='cardio'||day.type==='strength'&&day.exercises.length>0)&&(parseDate(date).getDay()!==3||day.type==='cardio')
   const mark=async()=>{
-    if(disabled||entry||!allowed||!account.session||account.loading)return
+    if(marking.current||busy||account.saving||entry||!allowed||!account.session||account.loading)return
+    if(!online){setError('Registro pendiente. Vuelve a conectarte y pulsa Reintentar registro.');return}
+    marking.current=true
     setBusy(true);setError('')
     try{
+      if(!account.complete){
+        await account.refresh()
+        if(contextRef.current===context)setError('Datos actualizados. Revisa tu rutina y vuelve a pulsar para registrar el día.')
+        return
+      }
       await account.flush()
       if(contextRef.current!==context)return
       const snapshot:Attendance={date,title:day.title,type:day.type==='strength'?'strength':'cardio',completedAt:new Date().toISOString()}
       account.set(key,snapshot)
       await account.flush()
-      if(contextRef.current===context){setRemoved(null);notify('Día entrenado guardado en tu cuenta.')}
+      if(contextRef.current===context){setRemoved(null);notify('Día entrenado guardado en tu cuenta.');onRegistered?.()}
     }catch{if(contextRef.current===context)setError('No se pudo confirmar el guardado. Revisa la conexión y pulsa Reintentar guardado.')}
-    finally{if(contextRef.current===context)setBusy(false)}
+    finally{marking.current=false;if(contextRef.current===context)setBusy(false)}
   }
   const remove=async()=>{
     if(disabled||!entry||!confirm(`¿Quitar el día entrenado del ${shortDate(date)}? Dejará de contar en tus estadísticas. Tu rutina y tus medidas se conservarán.`))return
@@ -104,21 +116,25 @@ export function AttendanceControl({date,day,notify}:{date:string;day:WorkoutDay;
   const retry=async(reload=false)=>{
     if(disabled)return
     setBusy(true);setError('')
-    try{if(reload)await account.discardAndReload();else await account.flush()}
+    try{
+      if(reload)await account.discardAndReload()
+      else if(!account.complete)await account.refresh()
+      else {await account.flush();if(finishGuide&&entry&&contextRef.current===context)onRegistered?.()}
+    }
     catch{if(contextRef.current===context)setError('No se pudo confirmar el cambio. Comprueba tu conexión y vuelve a intentarlo.')}
     finally{if(contextRef.current===context)setBusy(false)}
   }
   if(account.loading)return <section className="card attendance-control"><p role="status">Cargando tu historial de entrenamiento…</p></section>
   if(!account.session)return <section className="card attendance-control"><p>Inicia sesión en Progreso para guardar tus días entrenados.</p></section>
   return <section tabIndex={-1} className={`card attendance-control${entry?' attendance-control--done':''}`} aria-busy={busy}>
-    {entry?<><div className="attendance-heading"><CheckCircle2 aria-hidden="true"/><div><p className="eyebrow">DÍA ENTRENADO · {shortDate(entry.date)}</p><h3>{entry.title}</h3></div></div><p>{entry.type==='strength'?'Fuerza':'Cardio'} · {account.error||error?'Pendiente de confirmar.':busy||account.saving?'Confirmando el cambio en tu cuenta…':'Este día cuenta en tus estadísticas.'}</p><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>Quitar día entrenado</button></>:<>
-      <h3>{date>today?'Una sesión por venir':day.type==='recovery'?'Un día para recuperar':'Registrar entrenamiento'}</h3>
+    {entry?<><div className="attendance-heading"><CheckCircle2 aria-hidden="true"/><div><p className="eyebrow">DÍA ENTRENADO · {shortDate(entry.date)}</p><h3>{entry.title}</h3></div></div><p>{entry.type==='strength'?'Fuerza':'Cardio'} · {account.error||error?'Pendiente de confirmar.':busy||account.saving?'Confirmando el cambio en tu cuenta…':'Este día cuenta en tus estadísticas.'}</p><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>{recent?'Deshacer registro':'Quitar día entrenado'}</button></>:<>
+      <h3>{date>today?'Una sesión por venir':day.type==='recovery'?'Un día para recuperar':finishGuide?'Final de tu guía':'Registrar entrenamiento'}</h3>
       <p>{date>today?'Podrás registrarlo cuando llegue la fecha.':day.type==='recovery'?'El descanso no suma días entrenados.':day.type==='strength'&&!day.exercises.length?'Añade ejercicios a la rutina antes de registrar este día.':'Regístralo al terminar para que cuente en Progreso.'}</p>
-      {allowed&&<button className="primary full" disabled={disabled} onClick={mark}><Check size={18}/>{busy?'Guardando…':'Registrar entrenamiento realizado'}</button>}
+      {allowed&&<button className="primary full" disabled={busy||account.saving||(!online&&!finishGuide)} onClick={mark}><Check size={18}/>{busy?'Guardando…':error?'Reintentar registro':finishGuide?'Terminar y registrar':'Registrar entrenamiento realizado'}</button>}
     </>}
     {removed&&!entry&&<div className="attendance-undo" role="status"><span>Día retirado de las estadísticas.</span><button className="secondary" disabled={disabled} onClick={undo}><Undo2 size={16}/>Deshacer</button></div>}
     {!online&&<p className="small-note" role="status">Necesitas conexión a internet para guardar, quitar o recuperar un día entrenado.</p>}
     {(account.error||error)&&<p className="warning" role="alert">{account.error||error}</p>}
-    {account.error&&<div className="button-row"><button className="secondary" disabled={disabled} onClick={()=>retry()}>Reintentar guardado</button>{account.error.includes('otro dispositivo')&&<button className="secondary" disabled={disabled} onClick={()=>retry(true)}>Volver a cargar</button>}</div>}
+    {(account.error||error&&entry)&&<div className="button-row"><button className="secondary" disabled={disabled} onClick={()=>retry()}>Reintentar guardado</button>{account.error?.includes('otro dispositivo')&&<button className="secondary" disabled={disabled} onClick={()=>retry(true)}>Volver a cargar</button>}</div>}
   </section>
 }
