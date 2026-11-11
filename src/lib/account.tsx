@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode,
 import { createClient, type Session } from '@supabase/supabase-js'
 import config from '../data/cloud-config.json'
 import { attendanceEntryValid } from './attendance'
+import { trainingEntryValid } from './training-plan'
+import { samePlan } from './today-replacement'
 import { readAccountPages } from './account-pages'
 import { defaultSettings } from './db'
 import type { Backup, ProgressLog } from '../types'
@@ -28,6 +30,7 @@ type Account={
 }
 const Context=createContext<Account|null>(null)
 const conflict='Hay cambios nuevos en otro dispositivo. Exporta tus cambios antes de volver a cargar los datos de tu cuenta.'
+type PlanWrite = {user_id:string; key:string; value:{data:unknown}; version:number; updated_at:string}
 
 export function AccountProvider({children}:{children:ReactNode}){
   const [session,setSession]=useState<Session|null>(null)
@@ -35,6 +38,7 @@ export function AccountProvider({children}:{children:ReactNode}){
   const [values,setValues]=useState<Record<string,unknown>>({})
   const current=useRef(values),versions=useRef(new Map<string,{version:number;updated_at:string}>()),pending=useRef(new Map<string,unknown>())
   const running=useRef<Promise<void>|null>(null),owner=useRef<string|null>(null)
+  const unconfirmedPlan = useRef<PlanWrite|null>(null)
   const generation=useRef(0),loadNumber=useRef(0)
   const [complete,setComplete]=useState(false)
   const completeRef=useRef(false)
@@ -70,6 +74,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     try{localStorage.removeItem('plan-police-auth')}catch{}
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(owner.current!==(next?.user.id??null)){
+        unconfirmedPlan.current=null
         owner.current=next?.user.id??null;generation.current++;updateComplete(false);pending.current.clear();versions.current.clear();current.current={};setValues({});setLoading(!!next);setError('')
       }
       setSession(next);if(!next)setLoading(false)
@@ -85,25 +90,44 @@ export function AccountProvider({children}:{children:ReactNode}){
     setSaving(true)
     const task=(async()=>{
       while(pending.current.size&&owner.current===user){
-        const [key,value]=pending.current.entries().next().value as [string,unknown]
+        const [key,latestValue]=pending.current.entries().next().value as [string,unknown]
         const revision=versions.current.get(key),version=revision?.version
-        const row={user_id:user,key,value:{data:value},version:(version??0)+1,updated_at:new Date().toISOString()}
+        // Finish the exact interrupted write before sending any newer edit for this date.
+        const previous=unconfirmedPlan.current
+        const retryingPlan=previous?.user_id===user && previous.key===key
+        const row=retryingPlan ? previous : {
+          user_id:user,key,value:{data:latestValue},
+          version:(version??0)+1,updated_at:new Date().toISOString()
+        }
+        const value=row.value.data
+        const isPlan=trainingEntryValid(key,value)
+        if(isPlan)unconfirmedPlan.current=row
         const result=version===undefined?await supabase.from('plan_data').insert(row).select('version,updated_at'):await supabase.from('plan_data').update(row).eq('user_id',user).eq('key',key).eq('version',version).eq('updated_at',revision!.updated_at).select('version,updated_at')
+        if(owner.current!==user || (isPlan && unconfirmedPlan.current!==row))return
         let confirmed=result.data?.length===1 ? result.data[0] : null
-        if(result.error?.code==='23505' && version===undefined && attendanceEntryValid(key,value)){
-          // A previous insert may have committed before its response was lost.
+        const duplicateInsert=version===undefined && result.error?.code==='23505'
+        const missedUpdate=version!==undefined && !result.error && result.data?.length===0
+        const checkPlan=retryingPlan && isPlan && (duplicateInsert || missedUpdate)
+        const checkAttendance=duplicateInsert && attendanceEntryValid(key,value)
+        if(checkPlan || checkAttendance){
           const stored=await supabase.from('plan_data').select('version,updated_at,value').eq('user_id',user).eq('key',key).maybeSingle()
+          if(owner.current!==user || (isPlan && unconfirmedPlan.current!==row))return
           if(stored.error)throw new Error('No se pudo comprobar el registro. Reintenta al recuperar la conexión.')
           const record=stored.data?.value?.data
-          if(stored.data && attendanceEntryValid(key,record) && record.completedAt===value.completedAt &&
-            record.title===value.title && record.type===value.type)confirmed=stored.data
-          else throw new Error(conflict)
+          const matchesPlan=checkPlan && stored.data?.version===row.version &&
+            Date.parse(stored.data.updated_at)===Date.parse(row.updated_at) &&
+            trainingEntryValid(key,record) && samePlan(record,value)
+          const matchesAttendance=checkAttendance && attendanceEntryValid(key,record) &&
+            record.completedAt===value.completedAt && record.title===value.title && record.type===value.type
+          if(!matchesPlan && !matchesAttendance)throw new Error(conflict)
+          confirmed=stored.data
         }else if(result.error){
           if(result.error.code==='23505')throw new Error(conflict)
           throw new Error('No se ha podido sincronizar. Mantén esta página abierta, comprueba la conexión y reintenta.')
         }
         if(!confirmed)throw new Error(conflict)
         if(owner.current!==user)return
+        if(isPlan)unconfirmedPlan.current=null
         versions.current.set(key,{version:confirmed.version,updated_at:confirmed.updated_at})
         if(pending.current.get(key)===value)pending.current.delete(key)
       }
@@ -122,7 +146,7 @@ export function AccountProvider({children}:{children:ReactNode}){
   useEffect(()=>{
     const sync=()=>{if(document.visibilityState==='visible'&&owner.current&&!pending.current.size&&!running.current)void load().catch(()=>{})}
     const guard=(e:BeforeUnloadEvent)=>{if(pending.current.size){e.preventDefault();e.returnValue=''}}
-    const online=()=>{void flush().catch(()=>{})}
+    const online=()=>{void flush().then(()=>{if(!completeRef.current)sync()}).catch(()=>{})}
     const interval=window.setInterval(sync,60000)
     window.addEventListener('focus',sync);window.addEventListener('online',online);window.addEventListener('beforeunload',guard)
     return()=>{clearInterval(interval);window.removeEventListener('focus',sync);window.removeEventListener('online',online);window.removeEventListener('beforeunload',guard)}
@@ -162,7 +186,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     }finally{setLoading(false)}
   }
   const logout=async()=>{await flush();const {error}=await supabase.auth.signOut({scope:'local'});if(error)throw error}
-  const discardAndReload=async()=>{if(pending.current.size&&!confirm('¿Descartar los cambios que todavía no están sincronizados y cargar la versión de tu cuenta? Exporta antes si quieres conservarlos.'))return;pending.current.clear();await load()}
+  const discardAndReload=async()=>{if(pending.current.size&&!confirm('¿Descartar los cambios que todavía no están sincronizados y cargar la versión de tu cuenta? Exporta antes si quieres conservarlos.'))return;unconfirmedPlan.current=null;pending.current.clear();await load()}
   return <Context.Provider value={{session,loading,saving,error,values,complete,getBackup,set,flush,refresh,remove,restore,logout,discardAndReload}}>{children}</Context.Provider>
 }
 

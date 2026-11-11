@@ -38,8 +38,18 @@ it('lets a reader jump to any exercise and return without registering or editing
     render(<Guide/>)
     fireEvent.click(screen.getByRole('button',{name:'Empezar entrenamiento'}))
     const next=screen.getByRole('button',{name:'Siguiente ejercicio '+routine.exercises[1].name})
-    fireEvent.click(next)
+    const firstTap=new MouseEvent('click',{bubbles:true,detail:1})
+    fireEvent(next,firstTap)
+    fireEvent.click(next,{detail:1})
+    const delayedDoubleClick=new MouseEvent('click',{bubbles:true,detail:2})
+    Object.defineProperty(delayedDoubleClick,'timeStamp',{value:firstTap.timeStamp+500})
+    fireEvent(next,delayedDoubleClick)
     const toggle=screen.getByRole('button',{name:/Ver ejercicios\. Ejercicio 2 de/})
+    toggle.focus()
+    fireEvent.click(toggle)
+    fireEvent.keyDown(toggle,{key:'Escape'})
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(toggle)
     fireEvent.click(toggle)
     const current=screen.getByRole('button',{current:'step'})
     fireEvent.keyDown(current,{key:'Escape'})
@@ -53,6 +63,22 @@ it('lets a reader jump to any exercise and return without registering or editing
     fireEvent.click(screen.getByRole('button',{name:'Ejercicio anterior'}))
     expect(document.activeElement).toBe(screen.getByRole('heading',{name:routine.exercises[routine.exercises.length-2].name}))
     expect(account.set).not.toHaveBeenCalled()
+  } finally {scroll.mockRestore()}
+})
+
+it('moves focus into the cardio guide when starting it',()=>{
+  const date='2026-10-21'
+  const cardio=workoutDays.find(day=>day.type==='cardio')!
+  account.values['training:'+date]=planFromRoutine(cardio)
+  const scroll=vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
+  function Guide(){
+    const position=useGuidePosition('QA-A')
+    return <TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} {...position} onDirtyChange={vi.fn()}/>
+  }
+  try {
+    render(<Guide/>)
+    fireEvent.click(screen.getByRole('button',{name:'Empezar cardio'}))
+    expect(document.activeElement).toBe(screen.getByRole('region',{name:cardio.title}))
   } finally {scroll.mockRestore()}
 })
 

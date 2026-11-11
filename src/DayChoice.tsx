@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Activity, ArrowLeft, Check, ChevronRight, Dumbbell, Leaf, Play } from 'lucide-react'
 import { workoutDays } from './data/training'
 import { useAccount } from './lib/account'
@@ -30,10 +30,19 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
   const [custom,setCustom]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
   const previous=useRef(previousPlan)
   const heading=useRef<HTMLHeadingElement>(null)
+  const customButton=useRef<HTMLButtonElement>(null)
+  const previewButton=useRef<HTMLButtonElement>(null)
+  const previewId=useId()
+  const hasChoice=kind==='recovery'||(kind==='strength'&&routineDay!==undefined)||(kind==='cardio'&&!!activity)
+  const [customDirty,setCustomDirty]=useState(false)
+  const hasUnsavedChanges=hasChoice || (custom && customDirty)
   const startAfterSave=useRef(false)
   const sending=useRef(false),alive=useRef(true),written=useRef(false)
   const [online,setOnline]=useState(navigator.onLine)
   const weekday=parseDate(date).getDay(),key='training:'+date
+  useEffect(()=>{
+    if(previous.current||returnToRecord)heading.current?.focus()
+  },[returnToRecord])
   useEffect(()=>{
     alive.current=true
     const connectivity=()=>setOnline(navigator.onLine)
@@ -41,10 +50,18 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
     return ()=>{alive.current=false;window.removeEventListener('online',connectivity);window.removeEventListener('offline',connectivity)}
   },[])
   useEffect(()=>{
-    if(custom)return
-    onDirtyChange(!!kind)
+    onDirtyChange(hasUnsavedChanges)
     return ()=>onDirtyChange(false)
-  },[kind,custom,onDirtyChange])
+  },[hasUnsavedChanges,onDirtyChange])
+  useEffect(()=>{
+    if(!hasChoice || (custom && customDirty))return
+    const guard=(event:BeforeUnloadEvent)=>{
+      event.preventDefault()
+      event.returnValue=''
+    }
+    window.addEventListener('beforeunload',guard)
+    return ()=>window.removeEventListener('beforeunload',guard)
+  },[hasChoice,custom,customDirty])
 
   const strength=workoutDays.find(day=>day.day===routineDay && day.type==='strength')
   const duration=Number(minutes)
@@ -84,7 +101,10 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
     }
   }
   if(custom)return <TrainingPlanner date={date} initial={{...planFromRoutine(workoutDays[0]),title:'Mi rutina',exercises:[]}}
-    onDirtyChange={onDirtyChange} onCancel={()=>setCustom(false)} onSaved={onSaved}/>
+    onDirtyChange={setCustomDirty} onCancel={()=>{
+      setCustom(false)
+      requestAnimationFrame(()=>customButton.current?.focus())
+    }} onSaved={onSaved}/>
   return <section className="card day-choice">
     <p className="day-date">{new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(parseDate(date))}</p>
     {kind&&<button type="button" className="choice-type-back" disabled={busy||written.current}
@@ -113,17 +133,23 @@ export function DayChoice({date,onBegin,onSaved,onCancel,previousPlan,returnToRe
     {kind==='strength'&&<div className="day-choice-options" role="group" aria-label="Elige tu rutina">
 
       {workoutDays.filter(day=>day.type==='strength').map(day=><button key={day.day} disabled={busy||written.current}
-        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>{setRoutineDay(day.day);setPreview(false)}}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
-      <button className="text-button" disabled={busy||written.current} onClick={()=>setCustom(true)}>Crear mi propia rutina</button>
+        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>setRoutineDay(day.day)}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
+      <button ref={customButton} className="text-button" disabled={busy||written.current} onClick={()=>setCustom(true)}>Crear mi propia rutina</button>
     </div>}
     {kind==='cardio'&&<CardioPicker activity={activity} minutes={minutes} disabled={busy||written.current}
       onActivity={setActivity} onMinutes={setMinutes}/>}
     {kind==='recovery'&&<p>El descanso quedará en tu plan. Tus días entrenados se cuentan por separado.</p>}
     {!online&&<p className="small-note" role="status">Conéctate para guardar tu elección.</p>}
-    {ready&&(kind==='strength'||((!online||preview)&&kind==='cardio'))&&<button type="button" className="text-button choice-preview-toggle" aria-expanded={preview} onClick={()=>setPreview(!preview)}>
+    {ready&&(kind==='strength'||((!online||preview)&&kind==='cardio'))&&<button type="button" ref={previewButton} className="text-button choice-preview-toggle" aria-expanded={preview} aria-controls={preview?previewId:undefined} onClick={()=>setPreview(!preview)}>
       {preview?'Ocultar vista previa':!online?'Consultar esta guía sin guardar':`Ver los ${strength?.exercises.length} ejercicios`}<ChevronRight size={16} aria-hidden="true"/>
     </button>}
-    {preview&&ready&&kind!=='recovery'&&<section className="day-choice-preview" aria-label="Guía temporal">
+    {preview&&ready&&kind!=='recovery'&&<section id={previewId} className="day-choice-preview" aria-label="Guía temporal"
+      onKeyDown={event=>{
+        if(event.key==='Escape'&&event.currentTarget.contains(event.target as Node)){
+          setPreview(false)
+          previewButton.current?.focus()
+        }
+      }}>
       <h3>{kind==='strength'?strength?.title:cardioLabel(activity)}</h3><p className="small-note">{!online?'Consulta temporal. Puedes guardar tu elección cuando vuelvas a tener conexión.':kind==='strength'?'Toca una foto para ver la técnica.':'Tu elección aún no está guardada.'}</p>
       {kind==='strength'?<div className="choice-preview-exercises">{strength?.exercises.map(exercise=><article key={exercise.id}>
         <ExercisePhoto exercise={exercise}/><div><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exercise.unit==='seconds'?'s':'reps'}</small></div>
