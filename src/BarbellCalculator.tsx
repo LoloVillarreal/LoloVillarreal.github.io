@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
-import { Check, ChevronDown, ChevronRight, Minus, Plus, SlidersHorizontal, X } from 'lucide-react'
+import { flushSync } from 'react-dom'
+import { Check, ChevronDown, ChevronRight, Minus, Plus, SlidersHorizontal, Target, X } from 'lucide-react'
 import BarbellDrawing from './BarbellDrawing'
 import { barbells } from './data/barbells'
 import { platesPerSide, plateWeights } from './lib/gym-tools'
@@ -37,7 +38,8 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
   const [editWeight,setEditWeight]=useState(false)
   const selector=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null)
   const input=useRef<HTMLInputElement>(null),requestWeight=useRef(false)
-  const targetPanel=useRef<HTMLDetailsElement>(null),stage=useRef<HTMLElement>(null)
+  const [targetOpen,setTargetOpen]=useState(false)
+  const targetTrigger=useRef<HTMLButtonElement>(null),stage=useRef<HTMLElement>(null)
 
   function changePlate(weight:number,change:1|-1) {
     setSetup(s=>({...s,counts:{...s.counts,[weight]:Math.max(0,(s.counts[weight]??0)+change)}}))
@@ -48,13 +50,42 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
     setSetup(s=>({...s,barId:id}))
     selector.current?.close()
   }
+  function closeTarget() {
+    setTargetOpen(false)
+    targetTrigger.current?.focus()
+  }
   function applyTarget() {
     if(!suggested)return
     setSetup(s=>({...s,counts:Object.fromEntries(suggested.plates.map(p=>[p.weight,p.count]))}))
-    if(targetPanel.current)targetPanel.current.open=false
+    setTargetOpen(false)
     stage.current?.focus()
   }
   return <div className="bar-workbench">
+    <div className="bar-target">
+      <button type="button" className="primary bar-target-trigger" ref={targetTrigger} aria-expanded={targetOpen}
+        aria-controls="bar-target-form" onClick={()=>targetOpen ? closeTarget() : setTargetOpen(true)}>
+        <Target size={22} aria-hidden="true"/><span>{targetOpen?'Cerrar cálculo':'Calcular peso objetivo'}</span><ChevronDown size={18} aria-hidden="true"/>
+      </button>
+      <div id="bar-target-form" hidden={!targetOpen}>
+        {targetOpen&&<form className="card bar-target-form" onSubmit={event=>{event.preventDefault();applyTarget()}}
+          onKeyDown={event=>{
+            if(event.key==='Escape')closeTarget()
+          }}>
+          <label>Peso total con barra (kg)<input inputMode="decimal" autoFocus value={setup.target} placeholder="Por ejemplo, 60"
+            onFocus={event=>event.currentTarget.select()} onChange={event=>{const target=event.target.value;setSetup(s=>({...s,target}))}}/></label>
+          {barKg===null?<button type="button" className="secondary full" onClick={()=>{
+            flushSync(()=>setEditWeight(true))
+            input.current?.focus()
+          }}>Indicar peso de la barra</button>
+            :setup.target.trim()!==''&&(suggested&&possible!==null&&targetKg!==null?<div className="bar-target-result">
+              <p>{suggested.plates.length?'En cada lado: '+suggested.plates.map(p=>p.count+' × '+kg(p.weight)).join(' + ')+'.':'Solo necesitas la barra.'}</p>
+              {suggested.remainder>0&&<p>Con estos discos puedes montar {kg(possible)}. Faltarían {kg(targetKg-possible)} para el objetivo.</p>}
+              <button type="submit" className="primary full">Colocar {kg(possible)}<ChevronRight size={16} aria-hidden="true"/></button>
+            </div>:<p>{targetKg!==null&&targetKg<barKg?'El objetivo debe ser igual o mayor que el peso de la barra.':'Escribe un peso válido con hasta dos decimales.'}</p>)}
+        </form>}
+      </div>
+    </div>
+
     <section className="card bar-stage" tabIndex={-1} ref={stage} aria-label="Tu barra montada">
       <button ref={trigger} type="button" className="bar-selector" aria-haspopup="dialog" aria-label={'Elegir barra. Actual: '+bar.name}
         onClick={()=>{selector.current?.showModal();selector.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()}}>
@@ -94,18 +125,6 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
         </div>)}
       </div>}
     </section>
-
-    <details ref={targetPanel} className="card bar-target">
-      <summary>Calcular por peso objetivo<ChevronDown size={17} aria-hidden="true"/></summary>
-      <label>Peso objetivo (kg)<input inputMode="decimal" value={setup.target} placeholder="Por ejemplo, 60"
-        onChange={event=>{const target=event.target.value;setSetup(s=>({...s,target}))}}/></label>
-      {barKg===null?<p>Indica primero el peso de la barra.</p>:setup.target.trim()!==''&&(
-        suggested&&possible!==null&&targetKg!==null?<div className="bar-target-result">
-          <p>{suggested.plates.length?'En cada lado: '+suggested.plates.map(p=>p.count+' × '+kg(p.weight)).join(' + ')+'.':'Solo necesitas la barra.'}</p>
-          {suggested.remainder>0&&<p>Con estos discos puedes montar {kg(possible)}. Faltarían {kg(targetKg-possible)} para el objetivo.</p>}
-          <button type="button" className="secondary full" onClick={applyTarget}>Colocar {kg(possible)}<ChevronRight size={16}/></button>
-        </div>:<p>{targetKg!==null&&targetKg<barKg?'El objetivo debe ser igual o mayor que el peso de la barra.':'Escribe un peso válido con hasta dos decimales.'}</p>)}
-    </details>
 
     <dialog className="bar-picker-dialog" ref={selector} aria-labelledby="bar-picker-title" onClose={()=>{
       if(requestWeight.current)input.current?.focus()
