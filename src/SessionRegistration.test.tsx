@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
+import { useState } from 'react'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AttendanceControl } from './TrainingCalendar'
@@ -176,12 +177,16 @@ it('sólo cierra tras confirmar la asistencia y guarda una vez la duración acti
   const button=within(screen.getByRole('dialog',{name:'¿Finalizar entrenamiento?'})).getByRole('button',{name:'Guardar entrenamiento'})
   await act(async()=>{fireEvent.click(button);fireEvent.click(button)})
   expect(account.set).toHaveBeenCalledTimes(1)
-  expect(account.values[key]).toMatchObject({date,durationSeconds:73})
+  const names=workoutDays[0].exercises.map(exercise=>exercise.name)
+  expect(account.values[key]).toMatchObject({date,durationSeconds:73,exerciseNames:names})
+  expect(screen.queryByRole('region',{name:'Resumen del entrenamiento'})).toBeNull()
   expect(localStorage.getItem('la-guide:QA-A')).toBeTruthy()
   await act(async()=>{account.confirmedValues[key]=account.values[key];confirmSave()})
   view.rerender(<Guide/>)
   expect(localStorage.getItem('la-guide:QA-A')).toBeNull()
-  expect(screen.getByText(/Duración 01:13/)).toBeTruthy()
+  const summary=within(screen.getByRole('region',{name:'Resumen del entrenamiento'}))
+  expect(summary.getByText('01:13')).toBeTruthy()
+  for(const name of names) expect(summary.getByText(name)).toBeTruthy()
 })
 
 it('remembers the guide after reopening, isolates accounts and keeps the place when the summary opens',()=>{
@@ -198,6 +203,30 @@ it('remembers the guide after reopening, isolates accounts and keeps the place w
   reopened.rerender({owner:'QA-A'})
   act(()=>reopened.result.current.finish('2026-10-19'))
   expect(reopened.result.current.bookmark).toBe(null)
+})
+
+it('abre el mismo resumen desde semana y mes aunque cambie o se borre el plan',async()=>{
+  const date='2026-10-19',key='attendance:'+date
+  const receipt={date,title:'Rutina del lunes',type:'strength',completedAt:date+'T11:00:00Z',exerciseNames:['Remo','Sentadilla']}
+  account.confirmedValues[key]=account.values[key]=receipt
+  account.values['training:'+date]=planFromRoutine(workoutDays[0])
+  function Calendar(){const [selected,setSelected]=useState('2026-10-20')
+    return <TrainingScreen date={selected} setDate={setSelected} notify={vi.fn()} reader={null} bookmark={null} setReader={vi.fn()} finish={vi.fn()} onDirtyChange={vi.fn()}/>}
+  render(<Calendar/>)
+  for(const mode of ['semana','mes']){
+    if(mode==='mes'){
+      delete account.values['training:'+date]
+      fireEvent.click(screen.getByRole('button',{name:'Ver mes completo'}))
+    }
+    fireEvent.click(screen.getByRole('button',{name:/lunes, 19 de octubre de 2026.*ver resumen/}))
+    const summary=screen.getByRole('region',{name:'Resumen del entrenamiento'})
+    await waitFor(()=>expect(document.activeElement).toBe(summary))
+    expect(within(summary).getAllByRole('listitem').map(item=>item.textContent)).toEqual(receipt.exerciseNames)
+    expect(within(summary).getByText('Sin registrar')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button',{name:/martes, 20 de octubre de 2026/}))
+    expect(screen.queryByRole('region',{name:'Resumen del entrenamiento'})).toBeNull()
+  }
+  expect(account.set).not.toHaveBeenCalled()
 })
 
 it('one registration waits for server confirmation, even with a double tap',async()=>{

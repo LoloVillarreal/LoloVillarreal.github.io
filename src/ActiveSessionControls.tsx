@@ -9,6 +9,7 @@ export type SessionReview = 'finish' | 'discard' | null
 
 type Props = {
   day: WorkoutDay
+  cardioActivity?: string
   date: string
   clock?: SessionClock
   review: SessionReview
@@ -24,7 +25,7 @@ type Props = {
   pendingSave: boolean
 }
 
-export function ActiveSessionControls({day,date,clock,review,setReview,pause,resume,minimize,continueWorkout,unavailable,discard,onRegistered,notify,pendingSave}:Props) {
+export function ActiveSessionControls({day,date,cardioActivity,clock,review,setReview,pause,resume,minimize,continueWorkout,unavailable,discard,onRegistered,notify,pendingSave}:Props) {
   const seconds = useElapsedSeconds(clock)
   const paused = clock?.runningSince === null
   const state = paused ? 'Entrenamiento en pausa' : 'Entrenamiento en curso'
@@ -88,7 +89,7 @@ export function ActiveSessionControls({day,date,clock,review,setReview,pause,res
       {review==='finish'&&<div className="live-review-summary"><strong>{day.title}</strong>
         {seconds!==null&&<span>Tiempo de entrenamiento <b>{formatSessionDuration(seconds)}</b></span>}</div>}
       <div className="live-review-actions">
-        {review==='finish'&&<AttendanceControl date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}
+        {review==='finish'&&<AttendanceControl date={date} day={day} cardioActivity={cardioActivity} notify={notify} finishGuide onRegistered={onRegistered}
           sessionReview={{stopClock,setBusy:setSaving}}/>}
         <button type="button" ref={stay} className={review==='discard'?'primary full':'secondary full'} disabled={saving} onClick={()=>setReview(null)}>
           {paused?'Volver a la sesión':'Seguir entrenando'}

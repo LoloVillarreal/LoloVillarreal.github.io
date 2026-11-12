@@ -8,6 +8,7 @@ import { trainingEntryValid, type TrainingPlan } from './lib/training-plan'
 
 const account=vi.hoisted(()=>({
   values:{} as Record<string,unknown>, session:{user:{id:'synthetic'}}, complete:true,
+  confirmedValues:{} as Record<string,unknown>,
   loading:false, saving:false, error:'', set:vi.fn(), flush:vi.fn(), refresh:vi.fn(), remove:vi.fn(),
 }))
 vi.mock('./lib/account',()=>({
@@ -16,6 +17,7 @@ vi.mock('./lib/account',()=>({
 }))
 beforeEach(()=>{
   account.values={}
+  account.confirmedValues={}
   HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
   HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
   vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
@@ -101,7 +103,7 @@ it('permite revisar las fotos antes de decidir y solo abre la sesión de hoy des
 })
 it('ignora la posición antigua sin planificación pero conserva el día entrenado anterior',()=>{
   const date='2026-10-19'
-  account.values['attendance:'+date]={date,title:'Sesión ya hecha',type:'strength',completedAt:'2026-10-19T10:30:00Z'}
+  account.confirmedValues['attendance:'+date]=account.values['attendance:'+date]={date,title:'Sesión ya hecha',type:'strength',completedAt:'2026-10-19T10:30:00Z'}
   render(<TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} reader={{date,index:2}} bookmark={{date,index:2}} setReader={vi.fn()} finish={vi.fn()} onDirtyChange={vi.fn()}/>)
   expect(screen.queryByRole('heading',{name:'¿Qué quieres hacer este día?'})).toBeNull()
   expect(screen.getByRole('button',{name:'Añadir un plan a este día'})).toBeTruthy()

@@ -23,11 +23,13 @@ vi.mock('@supabase/supabase-js',()=>({
 }))
 
 afterEach(()=>{cleanup();vi.resetAllMocks()})
-it.each(['same','other-title','other-duration'])('checks the attendance receipt after a lost response (%s)', async scenario=>{
-  const data={date:'2026-11-09',type:'strength',title:'Sesión QA',durationSeconds:300,completedAt:'2026-11-09T12:00:00.000Z'}
+it.each(['same','other-title','other-duration','other-order','missing-list'])('checks the attendance receipt after a lost response (%s)', async scenario=>{
+  const legacy={date:'2026-11-09',type:'strength',title:'Sesión QA',durationSeconds:300,completedAt:'2026-11-09T12:00:00.000Z'}
+  const data={...legacy,exerciseNames:['Hip thrust en máquina','Remo en máquina']}
   const match=scenario==='same'
   fake.insert.mockResolvedValueOnce({error:{code:'offline'}}).mockResolvedValueOnce({error:{code:'23505'}})
-  const receipt={...data,title:scenario==='other-title'?'Otra rutina':data.title,durationSeconds:scenario==='other-duration'?301:300}
+  const receipt={...legacy,title:scenario==='other-title'?'Otra rutina':data.title,durationSeconds:scenario==='other-duration'?301:300,
+    ...(scenario!=='missing-list' && {exerciseNames:scenario==='other-order'?[...data.exerciseNames].reverse():[...data.exerciseNames]})}
   fake.receipt.mockResolvedValue({data:{version:1,updated_at:data.completedAt,value:{data:receipt}}})
   const hook=renderHook(()=>useAccount(),{wrapper:AccountProvider})
   await waitFor(()=>expect(hook.result.current.complete).toBe(true))

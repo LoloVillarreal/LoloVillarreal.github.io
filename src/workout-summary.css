@@ -1,0 +1,76 @@
+.workout-summary {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.workout-summary header h2 {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin: 0 0 .35rem;
+  color: var(--olive);
+  font-size: .875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.workout-summary:focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: 4px;
+  border-radius: .3rem;
+}
+.workout-summary header h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 5vw, 1.8rem);
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+.workout-summary header p,
+.workout-summary .summary-missing {
+  margin: .3rem 0 0;
+  color: var(--muted);
+  font-size: .875rem;
+}
+.summary-duration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .3rem .7rem;
+  margin: 0;
+  padding: .65rem .8rem;
+  border-radius: .85rem;
+  background: var(--surface2);
+}
+.summary-duration dt {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .875rem;
+}
+.summary-duration dd {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 700;
+}
+.summary-duration dd time {
+  font-size: 1.35rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.workout-summary h4 { margin: 0; font-size: .95rem; }
+.workout-summary ol {
+  list-style: decimal;
+  padding-inline-start: 1.55rem;
+  margin: .35rem 0 0;
+}
+.workout-summary li {
+  padding: .38rem 0 .38rem .15rem;
+  font-size: .9375rem;
+  line-height: 1.4;
+}
+.workout-summary li + li { border-top: 1px solid var(--line); }
+.workout-summary li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+.workout-summary .summary-activity { margin: .35rem 0 0; color: var(--text); }
+.workout-summary svg { flex: none; }

@@ -1,15 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react'
 import { useAccount } from './lib/account'
-import { attendanceEntryValid, type Attendance } from './lib/attendance'
+import { attendanceEntryValid, createAttendance, type Attendance } from './lib/attendance'
 import { addDays, isoDate, mondayOf, parseDate, shortDate, validDate } from './lib/dates'
 import { trainingEntryValid } from './lib/training-plan'
-import { formatSessionDuration } from './lib/guide-position'
+import { WorkoutSummary } from './WorkoutSummary'
 import type { WorkoutDay } from './types'
 
 const fullDate=(date:string)=>new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(parseDate(date))
 
-export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:string)=>void}){
+export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:string,openSummary?:boolean)=>void}){
   const account=useAccount(),headingId=useId(),today=isoDate()
   const [expanded,setExpanded]=useState(false)
   const first=`${date.slice(0,7)}-01`,monthDate=parseDate(first),offset=(monthDate.getDay()+6)%7
@@ -25,13 +25,13 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
     {expanded&&<label className="date-browser-jump">Ir a una fecha<input aria-label="Consultar entrenamiento" type="date" value={date} onChange={event=>{if(validDate(event.target.value))onChange(event.target.value)}}/></label>}
     {!expanded?<div className="training-week-strip" aria-label="Días de la semana">
       {Array.from({length:7},(_,i)=>addDays(mondayOf(date),i)).map(value=>{
-        const trained=loaded && value<=today && attendanceEntryValid(`attendance:${value}`,account.values[`attendance:${value}`])
+        const trained=loaded && value<=today && attendanceEntryValid(`attendance:${value}`,account.confirmedValues?.[`attendance:${value}`])
         const planned=loaded && trainingEntryValid(`training:${value}`,account.values[`training:${value}`])
         const status=trained?'✓ Hecho':planned?'Planificado':!loaded?'':value<=today?'Sin registro':'Por venir'
         return <button key={value} className={`${date===value?'selected':''} ${trained?'is-trained':''}`}
           aria-pressed={date===value} aria-current={value===today?'date':undefined}
-          aria-label={[fullDate(value),trained?'entrenado':status].filter(Boolean).join(', ')}
-          onClick={()=>onChange(value)}>
+          aria-label={[fullDate(value),trained?'entrenado, ver resumen':status].filter(Boolean).join(', ')}
+          onClick={()=>onChange(value,trained)}>
           <small>{['D','L','M','X','J','V','S'][parseDate(value).getDay()]}</small>
           <b>{parseDate(value).getDate()}</b><span className="week-mark" aria-hidden="true">{trained?<Check size={13}/>:planned?<i className="calendar-plan-marker"/>:null}</span>
         </button>
@@ -41,16 +41,16 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
       {Array.from({length:cells},(_,index)=>{
         const number=index-offset+1
         if(number<1||number>days)return <span key={`empty-${index}`} aria-hidden="true"/>
-        const value=`${date.slice(0,7)}-${String(number).padStart(2,'0')}`,plan=loaded?account.values[`training:${value}`]:undefined,entry=loaded?account.values[`attendance:${value}`]:undefined
+        const value=`${date.slice(0,7)}-${String(number).padStart(2,'0')}`,plan=loaded?account.values[`training:${value}`]:undefined,entry=loaded?account.confirmedValues?.[`attendance:${value}`]:undefined
         const planned=trainingEntryValid(`training:${value}`,plan),trained=value<=today&&attendanceEntryValid(`attendance:${value}`,entry)
-        return <button key={value} className={`training-calendar-day${date===value?' is-selected':''}${value===today?' is-today':''}${trained?' is-trained':''}`} aria-pressed={date===value} aria-current={value===today?'date':undefined} aria-label={`${fullDate(value)}${trained?`, entrenado: ${entry.title}`:''}${planned?`, planificado: ${plan.title}`:''}${!trained&&!planned?', sin registro':''}`} onClick={()=>onChange(value)}>
+        return <button key={value} className={`training-calendar-day${date===value?' is-selected':''}${value===today?' is-today':''}${trained?' is-trained':''}`} aria-pressed={date===value} aria-current={value===today?'date':undefined} aria-label={`${fullDate(value)}${trained?`, entrenado: ${entry.title}, ver resumen`:''}${planned?`, planificado: ${plan.title}`:''}${!trained&&!planned?', sin registro':''}`} onClick={()=>onChange(value,trained)}>
           <span>{number}</span><small>{trained?'Hecho':value<=today?'—':''}</small><span className="training-calendar-markers" aria-hidden="true">{planned&&<i className="calendar-plan-marker"/>}{trained&&<Check className="calendar-attendance-marker" size={12} strokeWidth={3}/>}</span>
         </button>
       })}
     </div>
 </>}
-    {expanded&&loaded&&<p className="attendance-month-summary">{Object.entries(account.values).filter(([key,value])=>key.startsWith(`attendance:${date.slice(0,7)}`)&&attendanceEntryValid(key,value)&&value.date<=today).length} días entrenados este mes · toca un día para consultar o registrar.</p>}
-    <footer className="training-calendar-legend">{expanded&&<span><span className="calendar-unrecorded">—</span>Sin registro</span>}<span><i className="calendar-plan-marker"/>Planificado</span><span><Check className="calendar-attendance-marker" size={14} strokeWidth={3}/>Entrenado</span></footer>
+    {expanded&&loaded&&<p className="attendance-month-summary">{Object.entries(account.confirmedValues??{}).filter(([key,value])=>key.startsWith(`attendance:${date.slice(0,7)}`)&&attendanceEntryValid(key,value)&&value.date<=today).length} días entrenados este mes.</p>}
+    <footer className="training-calendar-legend">{expanded&&<span><span className="calendar-unrecorded">—</span>Sin registro</span>}<span><i className="calendar-plan-marker"/>Planificado</span><span><Check className="calendar-attendance-marker" size={14} strokeWidth={3}/>Entrenado · toca para ver el resumen</span></footer>
     <div className="date-browser-actions">
       <button className="text-button" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}><CalendarDays size={16}/>{expanded?'Ver semana':'Ver mes completo'}</button>
       {date!==today&&<button className="text-button" onClick={()=>onChange(today)}>Volver a hoy</button>}
@@ -60,13 +60,14 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   </section>
 }
 
-export function AttendanceControl({date,day,notify,finishGuide=false,recent=false,existingOnly=false,onRegistered,sessionReview}:{
-  date:string; day:WorkoutDay; notify:(message:string)=>void
+export function AttendanceControl({date,day,cardioActivity,notify,finishGuide=false,recent=false,existingOnly=false,onRegistered,sessionReview}:{
+  date:string; day:WorkoutDay; cardioActivity?:string; notify:(message:string)=>void
   existingOnly?:boolean; finishGuide?:boolean; recent?:boolean; onRegistered?:()=>void
   sessionReview?:{stopClock:()=>number|undefined;setBusy:(busy:boolean)=>void}
 }){
   const account=useAccount(),key=`attendance:${date}`,value=account.values[key],today=isoDate()
   const entry=attendanceEntryValid(key,value)?value:undefined
+  const receipt=account.confirmedValues?.[key]
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[removed,setRemoved]=useState<Attendance|null>(null),[online,setOnline]=useState(()=>navigator.onLine)
   const marking=useRef(false)
   const context=`${account.session?.user.id??''}:${date}`,contextRef=useRef(context)
@@ -90,7 +91,7 @@ export function AttendanceControl({date,day,notify,finishGuide=false,recent=fals
       }
       await account.flush()
       if(contextRef.current!==context)return
-      const snapshot:Attendance={date,title:day.title,type:day.type==='strength'?'strength':'cardio',completedAt:new Date().toISOString(),...(durationSeconds!==undefined&&{durationSeconds})}
+      const snapshot=createAttendance(date,day,{durationSeconds,cardioActivity})
       account.set(key,snapshot)
       await account.flush()
       if(contextRef.current===context){setRemoved(null);notify('Día entrenado guardado en tu cuenta.');onRegistered?.()}
@@ -143,7 +144,7 @@ export function AttendanceControl({date,day,notify,finishGuide=false,recent=fals
     {account.error?.includes('otro dispositivo')&&<button type="button" className="secondary full" disabled={disabled} onClick={()=>retry(true)}>Volver a cargar</button>}
   </div>
   return <section tabIndex={-1} className={`card attendance-control${entry?' attendance-control--done':''}`} aria-busy={busy}>
-    {entry?<><div className="attendance-heading"><CheckCircle2 aria-hidden="true"/><div><p className="eyebrow">DÍA ENTRENADO · {shortDate(entry.date)}</p><h3>{entry.title}</h3></div></div><p>{entry.type==='strength'?'Fuerza':'Cardio'}{entry.durationSeconds!==undefined&&<> · Duración {formatSessionDuration(entry.durationSeconds)}</>} · {account.error||error?'Pendiente de confirmar.':busy||account.saving?'Confirmando el cambio en tu cuenta…':'Este día cuenta en tus estadísticas.'}</p><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>{recent?'Deshacer registro':'Quitar día entrenado'}</button></>:existingOnly?null:<>
+    {entry?attendanceEntryValid(key,receipt)?<><WorkoutSummary entry={receipt}/><button className="text-button attendance-remove" disabled={disabled} onClick={remove}>{recent?'Deshacer registro':'Quitar día entrenado'}</button></>:<p role="status">{account.error||error?'Registro pendiente de confirmar.':'Guardando tu entrenamiento…'}</p>:existingOnly?null:<>
       <h3>{date>today?'Una sesión por venir':day.type==='recovery'?'Un día para recuperar':finishGuide?'Final de tu guía':'Registrar entrenamiento'}</h3>
       <p>{date>today?'Podrás registrarlo cuando llegue la fecha.':day.type==='recovery'?'El descanso no suma días entrenados.':day.type==='strength'&&!day.exercises.length?'Añade ejercicios a la rutina antes de registrar este día.':'Regístralo al terminar para que cuente en Progreso.'}</p>
       {allowed&&<button className="primary full" disabled={busy||account.saving||(!online&&!finishGuide)} onClick={mark}><Check size={18}/>{busy?'Guardando…':error?'Reintentar registro':finishGuide?'Terminar y registrar':'Registrar entrenamiento realizado'}</button>}

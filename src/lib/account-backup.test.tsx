@@ -71,7 +71,8 @@ describe('seguridad de copias con una sesión sintética',()=>{
   it('restaura ajustes de ejercicio, meta y material sin perder rutinas ni crear marcas',async()=>{
     fake.page.mockImplementation(pageOk)
     fake.replace.mockResolvedValue({error:null})
-    const localState={ 'training:2026-11-11':{type:'cardio',title:'Caminata',notes:'',exercises:[],cardio:{activity:'Caminata',minutes:25}}, 'machineNote:D57C2EC7':'Banco 2','machineNote:32HKJ34K':'Zona de zancadas',hipGoal:{kg:52.5,reps:8},gymInventory:{pairs:null,hipBar:{id:'olympic-20',kg:20}} }
+    const localState={ 'training:2026-11-11':{type:'cardio',title:'Caminata',notes:'',exercises:[],cardio:{activity:'Caminata',minutes:25}}, 'machineNote:D57C2EC7':'Banco 2','machineNote:32HKJ34K':'Zona de zancadas',hipGoal:{kg:52.5,reps:8},gymInventory:{pairs:null,hipBar:{id:'olympic-20',kg:20}},
+      'attendance:2026-11-11':{date:'2026-11-11',type:'cardio',title:'Miércoles',completedAt:'2026-11-11T12:00:00Z',durationSeconds:1822,exerciseNames:['Caminata']} }
     const restored={...backup,localState}
     expect(validateBackup(restored)).toBe(true)
     expect(validateBackup({...restored,localState:{...localState,'machineNote:D57C2EC7':'x'.repeat(241)}})).toBe(false)

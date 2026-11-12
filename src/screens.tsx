@@ -211,6 +211,14 @@ function SettingsScreen({settings,saveSettings,legacyAvailable,notify}:{settings
   </>
 }
 
+function focusWorkoutSummary(date:string) {
+  requestAnimationFrame(()=>{
+    const summary=document.getElementById('workout-summary-'+date)
+    summary?.focus({preventScroll:true})
+    summary?.scrollIntoView({block:'start'})
+  })
+}
+
 export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,finish,pause,resume:resumeClock,discard,initialPreview,onDirtyChange}:{
   date:string;setDate:(date:string)=>void;notify:Notify;reader:GuidePosition|null;bookmark:GuidePosition|null
   setReader:(position:GuidePosition|null)=>void;finish:(date:string,startedAt?:number|null)=>void
@@ -220,6 +228,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const account=useAccount(),[editing,setEditing]=useState(false),[removing,setRemoving]=useState(false),[deletedPlan,setDeletedPlan]=useState<TrainingPlan|null>(null)
   useEffect(()=>setDeletedPlan(null),[date,account.session?.user.id])
   const [recentRegistration,setRecentRegistration]=useState<string|null>(null)
+  const previouslyActiveDate=useRef<string>()
   const [preview,setPreview]=useState<GuidePosition|null>(null)
   const previewRow=useRef<number|null>(null)
   const [summaryReview,setSummaryReview]=useState<SessionReview>(null)
@@ -242,8 +251,15 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     if(initialPreview?.date===date && consult)setPreview(initialPreview)
   },[initialPreview,date,consult])
   useEffect(()=>{
-    if(confirmed && bookmark?.date===date)finish(date,bookmark.clock?.startedAt??null)
-  },[confirmed,date,bookmark,finish])
+    if(confirmed && bookmark?.date===date){
+      finish(date,bookmark.clock?.startedAt??null)
+      if(previouslyActiveDate.current===date){
+        setRecentRegistration(date)
+        focusWorkoutSummary(date)
+      }
+    }
+    previouslyActiveDate.current=active?date:undefined
+  },[confirmed,date,bookmark,finish,active])
   const openGuide=(index=0)=>consult?setPreview({date,index}):setReader({date,index})
   useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[editing,reader?.date,reader?.index,preview?.date,preview?.index])
   function closeGuide(destination:'summary'|'registration') {
@@ -263,20 +279,17 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const resume = bookmark?.date === date ? Math.min(bookmark.index, Math.max(0, selected.exercises.length-1)) : 0
   function confirmedRegistration() {
     setRecentRegistration(date)
-    requestAnimationFrame(()=>{
-      const target=document.querySelector<HTMLElement>('.attendance-control')
-      target?.focus({preventScroll:true})
-      target?.scrollIntoView({block:'center'})
-    })
+    focusWorkoutSummary(date)
   }
-  const calendar=<TrainingCalendar key="calendar" date={date} onChange={value=>{
-      if(value===date)return
+  const calendar=<TrainingCalendar key="calendar" date={date} onChange={(value,openSummary)=>{
+      if(value===date&&!openSummary)return
       if(choiceDirty.current&&!confirm('¿Cambiar de fecha y descartar esta elección?'))return
       setPickingDate('');setPreview(null);previewRow.current=null;onDirtyChange(false);setDate(value)
+      if(openSummary)focusWorkoutSummary(value)
     }}/>
   const management=<section className="card plan-management"><p className="small-note">La planificación y los días entrenados se guardan por separado.</p>{hasPlan&&<button className="text-button" disabled={removing||account.saving||!navigator.onLine} onClick={async()=>{if(!confirm('¿Borrar la planificación de este día? Su marca de entrenado y tus medidas se conservarán.'))return;setRemoving(true);const previous=saved;try{await account.remove(`training:${date}`);setDeletedPlan(previous);notify('Planificación eliminada. Puedes deshacerlo.')}catch{notify('No se pudo borrar. Comprueba la conexión y reintenta.')}finally{setRemoving(false)}}}>Borrar planificación del día</button>}{deletedPlan&&<div className="undo-strip"><span>Planificación eliminada</span><button className="secondary" disabled={removing||account.saving||hasPlan||!navigator.onLine} onClick={async()=>{setRemoving(true);try{account.set(`training:${date}`,deletedPlan);await account.flush();setDeletedPlan(null);notify('Planificación recuperada.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setRemoving(false)}}}>Deshacer</button></div>}</section>
   const attendanceControl=<div key={'record:'+date} className="simple-day-register">
-    <AttendanceControl key={date} date={date} day={selected} notify={notify} existingOnly={!hasPlan || pickingDate===date} onRegistered={confirmedRegistration} recent={recentRegistration===date}/>
+    <AttendanceControl key={date} date={date} day={selected} cardioActivity={hasPlan?saved.cardio.activity:undefined} notify={notify} existingOnly={!hasPlan || pickingDate===date} onRegistered={confirmedRegistration} recent={recentRegistration===date}/>
   </div>
   const viewingPreview=preview?.date===date
   const guide=viewingPreview?preview:!consult?reader:null
@@ -301,8 +314,8 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     {calendar}
   </>
   if(recorded && !active && pickingDate!==date)return <>
-    {calendar}
     {attendanceControl}
+    {calendar}
     <section className="card recorded-plan-options">
       <h2>Plan de este día</h2>
       {hasPlan && <button className="secondary full" onClick={()=>openGuide()}>Ver la guía de {selected.title}</button>}
@@ -324,7 +337,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     {deletedPlan&&management}
   </>
   return <>
-    {active&&<ActiveSessionControls day={selected} date={date} notify={notify} onRegistered={confirmedRegistration} {...sessionActions}
+    {active&&<ActiveSessionControls day={selected} date={date} cardioActivity={saved.cardio.activity} notify={notify} onRegistered={confirmedRegistration} {...sessionActions}
       review={summaryReview} setReview={setSummaryReview} continueWorkout={()=>setReader({date,index:resume})}/>}
     {calendar}
     {!active&&<SavedDayChoice date={date} plan={saved} edit onChoose={kind=>{initialKind.current=kind;setPickingDate(date)}}
@@ -379,7 +392,7 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
     focusExercise()
   },[date,step])
   return <section className="training-session" ref={page} tabIndex={-1} aria-label={day.title}>
-    {!preview&&<ActiveSessionControls day={day} date={date} clock={clock} pause={pause} resume={resume}
+    {!preview&&<ActiveSessionControls day={day} date={date} cardioActivity={cardio?.activity} clock={clock} pause={pause} resume={resume}
       minimize={onExit} discard={discard} notify={notify} onRegistered={onRegistered} pendingSave={pendingSave}
       review={review} setReview={setReview}/>}
     <nav aria-label="Recorrer la guía" onKeyDown={event=>{

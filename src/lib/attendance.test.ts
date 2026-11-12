@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { attendanceEntryValid, attendanceFromValues, attendanceStats, type Attendance } from './attendance'
+import { attendanceEntryValid, attendanceFromValues, attendanceStats, createAttendance, type Attendance } from './attendance'
+import { replaceForDate } from './today-replacement'
+import { workoutForDate } from './training-plan'
 
 const attended=(date:string,type:Attendance['type']='cardio'):Attendance=>({date,title:'Mi entrenamiento',type,completedAt:`${date}T18:00:00.000Z`})
 
@@ -26,6 +28,29 @@ describe('días entrenados',()=>{
     expect(attendanceEntryValid('attendance:2026-10-21',attended('2026-10-21'))).toBe(true)
     expect(attendanceEntryValid('attendance:2026-10-21',attended('2026-10-21','strength'))).toBe(false)
     expect(attendanceStats([attended('2026-10-21','strength')],'2026-10-22').total).toBe(0)
+  })
+  it('conserva los nombres y el orden guardados tras una sustitución y posteriores cambios en la rutina',()=>{
+    const date='2026-11-09'
+    const plan=replaceForDate(date,undefined,0,'hip-thrust','Hip thrust en máquina')
+    plan.exercises=plan.exercises.slice(0,2).reverse()
+    const day=workoutForDate(date,plan)
+    const receipt=createAttendance(date,day,{durationSeconds:0})
+    day.exercises.reverse()
+    day.exercises[0].name='Otro nombre'
+    expect(receipt.exerciseNames).toEqual(['Peso muerto rumano con barra','Hip thrust en máquina'])
+    expect(receipt.durationSeconds).toBe(0)
+    expect(attendanceEntryValid('attendance:'+date,receipt)).toBe(true)
+  })
+  it('guarda el nombre mostrado del cardio y admite registros sin cronómetro',()=>{
+    const date='2026-11-11',day=workoutForDate(date)
+    const receipt=createAttendance(date,day,{cardioActivity:'Rowing Machine'})
+    expect(receipt.exerciseNames).toEqual(['Remo en máquina'])
+    expect(receipt).not.toHaveProperty('durationSeconds')
+    expect(attendanceEntryValid('attendance:'+date,receipt)).toBe(true)
+    expect(createAttendance(date,day)).not.toHaveProperty('exerciseNames')
+    for(const names of [[],[' '],[1],['Dos','Actividades'],['x'.repeat(161)]]){
+      expect(attendanceEntryValid('attendance:'+date,{...receipt,exerciseNames:names})).toBe(false)
+    }
   })
   it('lee solo asistencias válidas, ordenadas por fecha; preparar una rutina no cuenta como entrenar',()=>{
     expect(attendanceFromValues({

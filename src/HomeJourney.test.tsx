@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { HomeScreen, TrainingScreen } from './screens'
 import { planFromRoutine } from './lib/training-plan'
 import { workoutDays } from './data/training'
-const account = vi.hoisted(()=>({values:{} as Record<string,unknown>,session:{user:{id:'test'}},set:vi.fn(),remove:vi.fn(),loading:false,saving:false,complete:true,error:''}))
+const account = vi.hoisted(()=>({values:{} as Record<string,unknown>,get confirmedValues(){return this.values},session:{user:{id:'test'}},set:vi.fn(),remove:vi.fn(),loading:false,saving:false,complete:true,error:''}))
 vi.mock('./lib/account',()=>({useAccount:()=>account, AccountGate:({children}:{children:React.ReactNode})=>children, AccountPanel:()=>null,useCloudValue:vi.fn(),accountBackup:vi.fn()}))
 vi.mock('./lib/storage',()=>({useStored:()=>[1,vi.fn()],useStorage:()=>({})}))
 const wednesday='2026-11-11'
