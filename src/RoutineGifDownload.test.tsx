@@ -15,16 +15,45 @@ vi.mock('./lib/routine-gif-cache', () => ({
 const exercises = (...ids: string[]) => ids.map(id => ({hevyId: id, name: 'Ejercicio ' + id}))
 const onDevice = new Set<string>()
 const download = () => screen.getByRole<HTMLButtonElement>('button', {name: /Descargar los GIF|Guardar esta rutina|Reintentar descarga/})
+const stubWorker = (value: unknown) => Object.defineProperty(navigator, 'serviceWorker', {configurable: true, value})
 
 beforeEach(() => {
   vi.resetAllMocks()
+  stubWorker({controller: {state: 'activated'}})
   onDevice.clear()
   vi.mocked(isRoutineGifSaved).mockImplementation(async gif => onDevice.has(gif.file))
   vi.mocked(isRoutineGifGroupSaved).mockResolvedValue(false)
   vi.mocked(saveRoutineGif).mockImplementation(async gif => { onDevice.add(gif.file) })
   vi.mocked(rememberRoutineGifs).mockResolvedValue(undefined)
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  Reflect.deleteProperty(navigator, 'serviceWorker')
+})
+
+it('avisa del primer arranque hasta que se activa la guía y conserva los GIF ya descargados', async () => {
+  const worker = Object.assign(new EventTarget(), {state: 'activating'})
+  stubWorker(Object.assign(new EventTarget(), {controller: null, ready: Promise.resolve({active: worker})}))
+  render(<RoutineGifDownload exercises={exercises('A')}/>)
+  await waitFor(() => expect(download().disabled).toBe(false))
+  fireEvent.click(download())
+  await screen.findByRole('button', {name: /GIF guardados.*deja la app abierta/})
+  act(() => {
+    worker.state = 'activated'
+    worker.dispatchEvent(new Event('statechange'))
+  })
+  await screen.findByRole('button', {name: /GIF listos sin conexión/})
+  expect(saveRoutineGif).toHaveBeenCalledTimes(1)
+})
+
+it('permite guardar los GIF sin prometer el arranque offline en navegadores sin service worker', async () => {
+  stubWorker(undefined)
+  render(<RoutineGifDownload exercises={exercises('A')}/>)
+  await waitFor(() => expect(download().disabled).toBe(false))
+  fireEvent.click(download())
+  await screen.findByRole('button', {name: /GIF guardados.*necesita conexión para abrir la app/})
+  expect(rememberRoutineGifs).toHaveBeenCalledWith(['A'], 'qa')
+})
 
 it('continúa una descarga interrumpida sin repetir GIF y conserva el orden de los ejercicios disponibles', async () => {
   let interruption = true

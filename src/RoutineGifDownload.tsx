@@ -27,9 +27,32 @@ function DownloadButton({selection, userId}: {selection: string; userId: string}
   const ids = useMemo(() => selection.split(','), [selection])
   const [saved, setSaved] = useState<string[]>([])
   const [phase, setPhase] = useState<'checking' | 'idle' | 'saving' | 'ready'>('checking')
+  const [appReady, setAppReady] = useState(() => Boolean(navigator.serviceWorker?.controller))
   const [error, setError] = useState('')
   const active = useRef<AbortController | null>(null)
   const checkVersion = useRef(0)
+  useEffect(() => {
+    const workers = navigator.serviceWorker
+    if (phase !== 'ready' || !workers || appReady) return
+    let mounted = true
+    let worker: ServiceWorker | null = null
+    function check() {
+      if (mounted && (workers.controller || worker?.state === 'activated')) setAppReady(true)
+    }
+    workers.addEventListener('controllerchange', check)
+    check()
+    void workers.ready.then(registration => {
+      if (!mounted) return
+      worker = registration.active
+      worker?.addEventListener('statechange', check)
+      check()
+    }).catch(() => {})
+    return () => {
+      mounted = false
+      workers.removeEventListener('controllerchange', check)
+      worker?.removeEventListener('statechange', check)
+    }
+  }, [appReady, phase])
   useEffect(() => {
     let mounted = true
     async function check() {
@@ -92,11 +115,14 @@ function DownloadButton({selection, userId}: {selection: string; userId: string}
   const remaining = ids.filter(id => !saved.includes(id))
   const bytes = remaining.reduce((sum, id) => sum + routineGifs[id].bytes, 0)
   const megabytes = new Intl.NumberFormat('es-ES', {maximumFractionDigits: 1}).format(Math.max(0.1, bytes / 1_000_000))
-  const title = phase === 'ready' ? 'GIF listos sin conexión'
+  const title = phase === 'ready' ? (appReady ? 'GIF listos sin conexión' : 'GIF guardados')
     : phase === 'saving' ? 'Descargando los GIF…'
     : error ? 'Reintentar descarga'
     : !remaining.length ? 'Guardar esta rutina sin conexión' : 'Descargar los GIF de la rutina'
   const detail = phase === 'checking' ? 'Comprobando este dispositivo…'
+    : phase === 'ready' && !appReady ? (navigator.serviceWorker
+      ? 'La primera vez, deja la app abierta y con conexión hasta que esté lista.'
+      : 'Este navegador necesita conexión para abrir la app.')
     : phase === 'ready' ? ids.length + ' GIF en este dispositivo'
     : phase === 'saving' || saved.length ? saved.length + ' de ' + ids.length + ' guardados'
     : ids.length + ' GIF · ' + megabytes + ' MB'
