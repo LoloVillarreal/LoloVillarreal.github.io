@@ -32,7 +32,9 @@ function loadTarget(setup:Setup,barKg:number|null):Setup {
   return {...setup,counts:Object.fromEntries(load.plates.map(({weight,count})=>[weight,count]))}
 }
 
-export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup:Dispatch<SetStateAction<Setup>>}) {
+export default function BarbellCalculator({setup,setSetup,showPlatesByTarget=false}:{
+  setup:Setup;setSetup:Dispatch<SetStateAction<Setup>>;showPlatesByTarget?:boolean
+}) {
   const bar=barbells.find(item=>item.id===setup.barId) ?? barbells[0]
   const weightText=setup.barWeights[bar.id] ?? (bar.kg===null?'':number.format(bar.kg))
   const barKg=readKg(weightText)
@@ -77,6 +79,10 @@ export default function BarbellCalculator({setup,setSetup}:{setup:Setup;setSetup
         input.current?.focus()
       }}>Indicar peso de la barra</button>}
     </div>
+    {showPlatesByTarget && targetKg!==null && barKg!==null && targetKg>=barKg &&
+      <p className="exercise-plate-answer"><strong>Por lado</strong>{loaded.length
+        ? loaded.map(plate=>`${plate.count} × ${kg(plate.weight)}`).join(' + ')
+        : 'Sin discos'}</p>}
 
     <section className="card bar-stage" aria-label="Tu barra montada">
       <button ref={trigger} type="button" tabIndex={0} className="bar-selector" aria-haspopup="dialog" aria-label={'Elegir barra. Actual: '+bar.name}

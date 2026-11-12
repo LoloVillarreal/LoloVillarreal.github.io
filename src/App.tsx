@@ -12,6 +12,7 @@ import { currentTheme, themes } from './lib/appearance'
 import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen } from './screens'
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
+import { ExerciseWeightProvider } from './ExerciseWeight'
 import SectionSwitch from './SectionSwitch'
 import { pendingWorkout, WorkoutReturn } from './WorkoutReturn'
 import './access.css'
@@ -141,13 +142,14 @@ function Workspace(){
       }}>Actualizar</button>
     </div>}
   </>
-  if(route==='#prueba-gimnasio')return <Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id} onExit={()=>{setNavigation(v=>({...v,section:'home'}));location.hash=''}}/></Suspense>
+  const exerciseCalculator=<BarbellCalculator setup={barSetup} setSetup={setBarSetup} showPlatesByTarget/>
+  if(route==='#prueba-gimnasio')return <ExerciseWeightProvider value={exerciseCalculator}><Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id} onExit={()=>{setNavigation(v=>({...v,section:'home'}));location.hash=''}}/></Suspense></ExerciseWeightProvider>
   if(police)return <>{serviceNotice}{toast&&<p className="toast" role="status">{toast}</p>}<Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onUpdateBlockedChange={setPoliceUpdateBlocked} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense></>
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
   const section=legacyCalc?'nutrition':navigation.section
   const floatingWorkout=section==='training'?null:pendingWorkout(reader,account.values,isoDate())
   const cacheMessage=cacheReady?'Guía disponible sin conexión':cacheError||!('serviceWorker' in navigator)?'Guía disponible con conexión':'Preparando la guía para usarla sin conexión…'
-  return <div className="fitness-viewport" style={keyboardHeight ? {height:keyboardHeight} : undefined}>
+  return <ExerciseWeightProvider value={exerciseCalculator}><div className="fitness-viewport" style={keyboardHeight ? {height:keyboardHeight} : undefined}>
     <div id="fitness-scroll"><div className="app-shell">
     {serviceNotice}
     <header className="topbar">
@@ -195,7 +197,7 @@ function Workspace(){
         </button>
       )}
     </nav>
-  </div>
+  </div></ExerciseWeightProvider>
 }
 
 function Koala(){return <img className="koala-logo" src="./plan-la-koala.png" alt="Koala L&A" width="64" height="64"/>}

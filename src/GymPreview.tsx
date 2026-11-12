@@ -5,6 +5,7 @@ import { alternativeExercise, catalogById, equipmentNames, exerciseImage } from 
 import { techniqueFor } from './lib/exercise-technique'
 import { RestTimer } from './RestTimer'
 import './gym-preview.css'
+import { ExerciseWeightButton } from './ExerciseWeight'
 
 // A short rehearsal using three exercises from the existing Monday routine.
 const routine = [workoutDays[0].exercises[0], workoutDays[0].exercises[3], workoutDays[0].exercises[1]]
@@ -49,6 +50,7 @@ export default function GymPreview({userId,onExit}:{userId:string;onExit:()=>voi
       <h1 ref={title} tabIndex={-1}>{current.name}</h1>
       <div className="gp-figure"><img src={exerciseImage(current)} alt={current.name}/></div>
       <p className="gp-instruction"><strong>{original.sets} series de {original.reps.join(' a ')} repeticiones</strong><br/>Descansa {original.rest[1]} segundos entre series.</p>
+      <ExerciseWeightButton exerciseName={current.name}/>
       <details key={'tech'+current.id}><summary>Ver cómo se hace</summary><p>{techniqueFor(current).text}</p><p>Trabaja principalmente: {current.muscle}.</p></details>
       {alternative && <div className="gp-actions">
         <button className="text-button" ref={changeButton} aria-expanded={choosing} onClick={()=>setChoosing(!choosing)}>¿Equipo ocupado? Ver alternativa</button>

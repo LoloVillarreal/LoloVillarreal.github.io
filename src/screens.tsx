@@ -1,5 +1,6 @@
 import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
+import { ExerciseWeightButton } from './ExerciseWeight'
 import BarbellDrawing from './BarbellDrawing'
 import { exerciseUnit } from './lib/exercise-library'
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
@@ -409,6 +410,7 @@ function ExerciseGuide({exercise}:{exercise:Exercise}) {
     <div className="training-session-dose">
       <strong>Haz {exercise.sets} {exercise.sets===1?'serie':'series'} de {amount} {unit}{exercise.perSide?' por lado':''}.</strong>
       {exercise.rest[1]>0&&<span>Descansa {rest} segundos entre series.</span>}
+      <ExerciseWeightButton exerciseName={exercise.name}/>
     </div>
     <details key={exercise.id} className="session-details">
       <summary>Cómo hacerlo</summary>

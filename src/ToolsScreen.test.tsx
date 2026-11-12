@@ -5,13 +5,15 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, expect, it, vi } from 'vitest'
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
+import { ExerciseWeightProvider } from './ExerciseWeight'
 import { StorageProvider } from './lib/storage'
 import { resetRest, setRestPreset } from './lib/rest-clock'
 
 function Tools() {
   const [tool, setTool] = useState('')
   const [setup,setSetup]=useState(initialBarSetup)
-  return <ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator setup={setup} setSetup={setSetup}/>}/>
+  const sharedSetup={setup,setSetup}
+  return <ExerciseWeightProvider value={<BarbellCalculator {...sharedSetup} showPlatesByTarget/>}><ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator {...sharedSetup}/>}/></ExerciseWeightProvider>
 }
 
 afterEach(() => { cleanup(); resetRest(); setRestPreset(90); vi.restoreAllMocks(); vi.useRealTimers() })
@@ -123,4 +125,33 @@ it('abre una ficha pulsando su nombre y mantiene la búsqueda al volver', () => 
   fireEvent.click(screen.getByRole('button', {name:'Borrar búsqueda'}))
   expect(document.activeElement).toBe(screen.getByLabelText('Buscar ejercicio'))
   expect(screen.getAllByRole('button', {name:/Ver foto y técnica de/})).toHaveLength(30)
+})
+
+it('calcula desde la ficha, vuelve al mismo botón y conserva el montaje al abrir Barra y discos', () => {
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
+  render(<Tools/>)
+  fireEvent.click(screen.getByRole('button',{name:/Biblioteca de ejercicios/}))
+  fireEvent.change(screen.getByRole('searchbox'),{target:{value:'hip thrust'}})
+  fireEvent.click(screen.getAllByRole('button',{name:/Ver foto y técnica de/})[0])
+  const exercise=screen.getByRole('dialog')
+  const launch=within(exercise).getByRole('button',{name:'Calcular peso'})
+  fireEvent.click(launch)
+  const calculator=screen.getByRole('dialog',{name:'Calcular peso'})
+  fireEvent.change(within(calculator).getByRole('textbox',{name:/Peso objetivo/}),{target:{value:'65'}})
+  expect(within(calculator).getByLabelText('Peso total').textContent).toBe('65 kg')
+  expect(within(calculator).getByText('1 × 20 kg + 1 × 2,5 kg')).toBeTruthy()
+  fireEvent.click(within(calculator).getByRole('button',{name:/Elegir barra/}))
+  const picker=screen.getByRole('dialog',{name:'Elige tu barra'})
+  fireEvent(picker,new Event('cancel',{cancelable:true,bubbles:true}))
+  expect(calculator.isConnected && exercise.isConnected).toBe(true)
+  fireEvent.click(within(picker).getByRole('button',{name:'Cerrar selector de barras'}))
+  fireEvent.click(within(calculator).getByRole('button',{name:'Volver al ejercicio'}))
+  expect(screen.getByRole('dialog')).toBe(exercise)
+  expect(document.activeElement).toBe(launch)
+  fireEvent.click(within(exercise).getByRole('button',{name:'Cerrar ficha'}))
+  expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('hip thrust')
+  fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
+  fireEvent.click(screen.getByRole('button',{name:/Barra y discos/}))
+  expect(screen.getByLabelText('Peso total').textContent).toBe('65 kg')
 })
