@@ -1,5 +1,6 @@
 import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
+import BarbellDrawing from './BarbellDrawing'
 import { exerciseUnit } from './lib/exercise-library'
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
 import { Apple, ArrowLeft, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Heart, Play, Salad } from 'lucide-react'
@@ -55,7 +56,7 @@ function SavedDayChoice({date,plan,onChoose,onStart,onDetails,edit=false}:{
   </section>
 }
 
-export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onSelectionSaved}:{onSelectionSaved?:()=>void;onDirtyChange?:(dirty:boolean)=>void;onStrength:()=>void;go:(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>void;reader:{date:string;index:number}|null;startTraining:(date:string,index?:number)=>void}){
+export function HomeScreen({go,reader,floatingSessionDate,startTraining,onStrength,onOpenPlates,onDirtyChange,onSelectionSaved}:{onSelectionSaved?:()=>void;onDirtyChange?:(dirty:boolean)=>void;onStrength:()=>void;onOpenPlates:()=>void;go:(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>void;reader:{date:string;index:number}|null;floatingSessionDate?:string;startTraining:(date:string,index?:number)=>void}){
   const account=useAccount(),today=isoDate(),saved=account.values[`training:${today}`]
   const hasPlan=trainingEntryValid(`training:${today}`,saved)
   const [pickingDate,setPickingDate]=useState(''),[startChosen,setStartChosen]=useState(false)
@@ -121,13 +122,13 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
       <h2>{day.title}</h2>
       <p>{daySummary}{day.optional ? ' · Opcional' : ''}</p>
       <div className="home-actions">
-        <button className="primary full" disabled={account.loading || (day.type === 'strength' && !day.exercises.length)}
-          onClick={() => startTraining(today,resumeIndex)}><Play size={17}/>{guideLabel}</button>
+        {floatingSessionDate!==today&&<button className="primary full" disabled={account.loading || (day.type === 'strength' && !day.exercises.length)}
+          onClick={() => startTraining(today,resumeIndex)}><Play size={17}/>{guideLabel}</button>}
         <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(today)}}>Cambiar mi elección</button>
         <button className="text-button" onClick={() => go('training',today)}>Ver el plan de hoy<ChevronRight size={16}/></button>
       </div>
     </section> }
-    {reader && reader.date < today && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
+    {reader && reader.date < today && floatingSessionDate!==reader.date && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
       Continuar la sesión del {shortDate(reader.date)}<ChevronRight size={16}/>
     </button>}
     </div>
@@ -148,6 +149,21 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
           <i aria-hidden="true">{parseDate(date).getDate()}{trained&&<Check size={10} strokeWidth={3}/>}</i>
         </button></li>)}
       </ol></>}
+    </section>
+    <section className="home-gym-shortcuts" aria-labelledby="home-gym-title">
+      <div className="home-gym-heading">
+        <h2 id="home-gym-title">Herramientas</h2>
+        <button type="button" className="text-button" aria-label="Ver todas las herramientas" onClick={()=>go('nutrition')}>
+          Ver todas <ChevronRight size={15} aria-hidden="true"/>
+        </button>
+      </div>
+      <button type="button" className="home-gym-plates" onClick={onOpenPlates}>
+        <span className="home-gym-art" aria-hidden="true">
+          <BarbellDrawing shape="straight" miniature plates={[{weight:20,count:1,color:'#759bd2'},{weight:10,count:1,color:'#69a98e'}]}/>
+        </span>
+        <span className="home-gym-copy"><strong>Calcular peso de la barra</strong><small>Qué discos poner en cada lado</small></span>
+        <ChevronRight size={18} aria-hidden="true"/>
+      </button>
     </section>
     <div className="card simple-day-links home-secondary-links">
       <WeekPlan/>

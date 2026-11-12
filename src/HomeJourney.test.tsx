@@ -21,7 +21,7 @@ afterEach(()=>{cleanup();vi.restoreAllMocks();vi.useRealTimers()})
 it('mantiene el punto de lectura al abrir sin datos y reanuda cuando vuelve la rutina',()=>{
   const date='2026-11-12',startTraining=vi.fn(),go=vi.fn()
   vi.setSystemTime(new Date(date+'T12:00:00'))
-  const props={go,reader:{date,index:2},startTraining,onStrength:vi.fn()}
+  const props={go,reader:{date,index:2},startTraining,onStrength:vi.fn(),onOpenPlates:vi.fn()}
   account.complete=false
   const {rerender}=render(<HomeScreen {...props}/>)
   expect(screen.getByRole('heading',{name:'Tu sesión está en pausa'})).toBeTruthy()
@@ -56,7 +56,7 @@ it('el calendario solo pide descartar una elección si cambia de día y hay algo
 it('después de entrenar, Inicio ofrece ver el registro y preparar fuerza otro día sin asignar un entrenamiento',()=>{
   const go=vi.fn()
   account.values['attendance:'+wednesday]=done
-  render(<HomeScreen go={go} reader={null} startTraining={vi.fn()} onStrength={vi.fn()}/>)
+  render(<HomeScreen go={go} reader={null} startTraining={vi.fn()} onStrength={vi.fn()} onOpenPlates={vi.fn()}/>)
   expect(screen.getByRole('heading',{name:'Cardio de prueba'})).toBeTruthy()
   expect(screen.queryByRole('heading',{name:'¿Qué quieres hacer hoy?'})).toBeNull()
   fireEvent.click(screen.getByRole('button',{name:'Ver mi registro'}))
@@ -70,7 +70,7 @@ it('después de entrenar, Inicio ofrece ver el registro y preparar fuerza otro d
 it('propone una fecha de fuerza disponible sin desplazar un descanso guardado',()=>{
   const go=vi.fn()
   account.values['training:2026-11-12']=planFromRoutine(workoutDays.find(day=>day.type==='recovery')!)
-  render(<HomeScreen go={go} reader={null} startTraining={vi.fn()} onStrength={vi.fn()}/>)
+  render(<HomeScreen go={go} reader={null} startTraining={vi.fn()} onStrength={vi.fn()} onOpenPlates={vi.fn()}/>)
   fireEvent.click(screen.getByRole('button',{name:/Fuerza otro día.*viernes/i}))
   expect(go).toHaveBeenCalledWith('training','2026-11-13')
   expect(account.set).not.toHaveBeenCalled()
@@ -80,7 +80,7 @@ it.each(['Inicio','Entrenos'])('ofrece elegir antes del plan guardado y conserva
   const original=planFromRoutine(workoutDays.find(day=>day.type==='cardio')!)
   account.values[key]=original
   render(origin==='Inicio'
-    ?<HomeScreen go={vi.fn()} reader={null} startTraining={vi.fn()} onStrength={vi.fn()}/>
+    ?<HomeScreen go={vi.fn()} reader={null} startTraining={vi.fn()} onStrength={vi.fn()} onOpenPlates={vi.fn()}/>
     :<TrainingScreen date={wednesday} setDate={vi.fn()} notify={vi.fn()} reader={null} bookmark={null} setReader={vi.fn()} finish={vi.fn()} onDirtyChange={vi.fn()}/>)
   const opener=screen.getByRole('button',{name:'Cardio'})
   const savedStart=screen.getByRole('button',{name:'Empezar cardio'})
@@ -105,5 +105,19 @@ it('mantiene el registro visible y abre la elección histórica solo por petici�
   expect(screen.queryByRole('heading',{name:'¿Qué quieres hacer hoy?'})).toBeNull()
   expect(screen.getByRole('button',{name:'Quitar día entrenado'})).toBeTruthy()
   await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('button',{name:'Añadir un plan a este día'})))
+  expect(account.set).not.toHaveBeenCalled()
+})
+
+it('abre la calculadora o todas las herramientas sin registrar ni empezar el entrenamiento pendiente',()=>{
+  const go=vi.fn(), onOpenPlates=vi.fn(), startTraining=vi.fn()
+  account.values['training:'+wednesday]=planFromRoutine(workoutDays.find(day=>day.type==='cardio')!)
+  render(<HomeScreen go={go} reader={{date:wednesday,index:0}} floatingSessionDate={wednesday} startTraining={startTraining} onStrength={vi.fn()} onOpenPlates={onOpenPlates}/>)
+  expect(screen.queryByRole('button',{name:/Continuar|Empezar cardio/})).toBeNull()
+  fireEvent.click(screen.getByRole('button',{name:/Calcular peso de la barra/}))
+  expect(onOpenPlates).toHaveBeenCalledOnce()
+  expect(go).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button',{name:'Ver todas las herramientas'}))
+  expect(go).toHaveBeenCalledWith('nutrition')
+  expect(startTraining).not.toHaveBeenCalled()
   expect(account.set).not.toHaveBeenCalled()
 })

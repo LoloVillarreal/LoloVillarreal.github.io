@@ -15,13 +15,29 @@
   --hero-line:#c0cce1; --tab:#edf1fa; --accent-stamp:#9d75a5;
 }
 .fitness-viewport {
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-side:max(env(safe-area-inset-left,0px),env(safe-area-inset-right,0px));
+  position:relative;
+  padding-top:var(--safe-top);
   background:var(--paper); color:var(--pine);
 }
-.fitness-viewport .app-shell { max-width:1060px; }
+.fitness-viewport::before {
+  content:""; position:absolute; z-index:2; pointer-events:none;
+  inset-inline:0; top:var(--safe-top); height:10px;
+  background:linear-gradient(to bottom,var(--paper),transparent);
+}
+.fitness-viewport .app-shell {
+  max-width:1060px; padding-top:12px;
+  padding-inline:max(var(--page-gutter),var(--safe-side));
+}
 .app-shell > .topbar {
+  display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center;
   margin-bottom:var(--section-space); padding-block:4px 12px;
   border-bottom:1px solid var(--rule);
 }
+.app-shell .topbar .brand { display:grid; justify-items:center; gap:1px; text-align:center; }
+.app-shell .topbar .brand-signature { justify-content:center; }
+.app-shell .topbar .brand .koala-logo { width:26px; height:26px; object-fit:contain; }
 .brand-signature {
   display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:0;
   color:var(--quiet); font:650 12px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -52,8 +68,8 @@
 }
 .home-decision .day-choice-index::before {
   content:""; position:absolute; pointer-events:none; z-index:-1; inset:0;
-  background:repeating-radial-gradient(ellipse at 105% -38%,transparent 0 20px,var(--hero-line) 21px,transparent 22px 36px);
-  opacity:.28; mask-image:linear-gradient(105deg,transparent 52%,#000);
+  background:repeating-radial-gradient(ellipse at 50% -55%,transparent 0 22px,var(--hero-line) 23px,transparent 24px 44px);
+  opacity:.2; mask-image:linear-gradient(to bottom,#000,transparent 65%);
 }
 .home-decision .day-choice-index h2 { color:var(--hero-text); max-width:18ch; }
 .home-decision .day-choice-index > .day-date,.home-decision .day-choice-index > p:not(.day-date) { color:var(--hero-kicker); }
@@ -115,7 +131,6 @@
 @media(max-width:355px) {
   .workspace .day-choice-index .choice-menu { gap:5px; }
   .workspace .day-choice-index .choice-menu-row { padding:10px 6px; }
-  .app-shell .topbar .brand .koala-logo { width:32px; height:36px; }
   .app-shell .topbar { gap:6px; }
 }
 @media(forced-colors:active) {

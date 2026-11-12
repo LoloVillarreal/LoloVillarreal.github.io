@@ -37,3 +37,24 @@
 .saved-day-shortcut .secondary { flex:none; min-height:44px; padding:6px 12px; }
 .saved-day-choice .saved-day-details { display:inline-flex; align-items:center; gap:4px; min-height:44px; font-size:13px; }
 .completed-actions .secondary { min-height:44px; }
+
+.home-gym-shortcuts { min-width:0; color:var(--pine); }
+.home-gym-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0 8px; }
+.home-gym-heading h2 { margin:0; font:500 1.4rem/1.2 var(--display); }
+.home-gym-heading .text-button {
+  display:inline-flex; align-items:center; gap:2px; min-height:44px; padding:4px 0 4px 8px;
+  color:var(--quiet); font-size:.875rem;
+}
+.home-gym-plates {
+  display:grid; width:100%; grid-template-columns:clamp(64px,18vw,90px) minmax(0,1fr) auto;
+  align-items:center; gap:clamp(8px,2.5vw,14px); padding:10px; border:1px solid var(--rule);
+  border-radius:15px; background:var(--sheet); color:var(--pine); text-align:left;
+}
+.home-gym-art {
+  display:grid; align-items:center; height:52px; border-radius:10px;
+  background:var(--tab);
+}
+.home-gym-art .barbell-drawing { display:block; width:100%; height:auto; }
+.home-gym-copy { display:grid; gap:3px; }
+.home-gym-copy strong { font-size:1rem; line-height:1.2; }
+.home-gym-copy small { font-size:.8125rem; line-height:1.4; color:var(--quiet); }

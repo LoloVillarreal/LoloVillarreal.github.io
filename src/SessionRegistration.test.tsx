@@ -7,6 +7,7 @@ import { useGuidePosition } from './lib/guide-position'
 import { workoutDays } from './data/training'
 import { TrainingScreen } from './screens'
 import { planFromRoutine } from './lib/training-plan'
+import { pendingWorkout } from './WorkoutReturn'
 
 const account=vi.hoisted(()=>({
   session:{user:{id:'QA-A'}}, values:{} as Record<string,unknown>, complete:true, loading:false,
@@ -25,6 +26,18 @@ beforeEach(()=>{
   Object.defineProperty(navigator,'onLine',{configurable:true,value:true})
 })
 afterEach(()=>{cleanup();Object.defineProperty(navigator,'onLine',{configurable:true,value:true})})
+
+it('recupera el punto disponible si se acortó la rutina y retira el acceso si ya se registró o eliminó',()=>{
+  const date='2026-11-12', position={date,index:2}
+  const plan=planFromRoutine(workoutDays[0])
+  plan.exercises=plan.exercises.slice(0,1)
+  const values:Record<string,unknown>={['training:'+date]:plan}
+  expect(pendingWorkout(position,values,date)).toMatchObject({date,index:0,detail:'Ejercicio 1 de 1'})
+  expect(pendingWorkout(position,{},date)).toBeNull()
+  expect(pendingWorkout(null,values,date)).toBeNull()
+  values['attendance:'+date]={date,type:'strength',title:plan.title,completedAt:date+'T10:00:00Z'}
+  expect(pendingWorkout(position,values,date)).toBeNull()
+})
 
 it.each(['futura','registrada'])('consultar una rutina %s no desplaza la sesión en curso ni modifica su asistencia',kind=>{
   const date=kind==='futura'?'2099-01-01':'2026-10-19', plan=planFromRoutine(workoutDays[0])
