@@ -6,6 +6,7 @@ import { addDays, isoDate, mondayOf, parseDate, shortDate, validDate } from './l
 import { trainingEntryValid } from './lib/training-plan'
 import { WorkoutSummary } from './WorkoutSummary'
 import type { WorkoutDay } from './types'
+import type { SetLog } from './lib/workout-sets'
 
 const fullDate=(date:string)=>new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(parseDate(date))
 
@@ -60,8 +61,8 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   </section>
 }
 
-export function AttendanceControl({date,day,cardioActivity,notify,finishGuide=false,recent=false,existingOnly=false,onRegistered,sessionReview}:{
-  date:string; day:WorkoutDay; cardioActivity?:string; notify:(message:string)=>void
+export function AttendanceControl({date,day,cardioActivity,setLog,notify,finishGuide=false,recent=false,existingOnly=false,onRegistered,sessionReview}:{
+  date:string; day:WorkoutDay; cardioActivity?:string; setLog?:SetLog; notify:(message:string)=>void
   existingOnly?:boolean; finishGuide?:boolean; recent?:boolean; onRegistered?:()=>void
   sessionReview?:{stopClock:()=>number|undefined;setBusy:(busy:boolean)=>void}
 }){
@@ -91,7 +92,7 @@ export function AttendanceControl({date,day,cardioActivity,notify,finishGuide=fa
       }
       await account.flush()
       if(contextRef.current!==context)return
-      const snapshot=createAttendance(date,day,{durationSeconds,cardioActivity})
+      const snapshot=createAttendance(date,day,{durationSeconds,cardioActivity,setLog})
       account.set(key,snapshot)
       await account.flush()
       if(contextRef.current===context){setRemoved(null);notify('Día entrenado guardado en tu cuenta.');onRegistered?.()}

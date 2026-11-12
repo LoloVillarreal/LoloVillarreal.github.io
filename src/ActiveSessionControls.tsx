@@ -3,6 +3,7 @@ import { ChevronDown, Flag, Pause, Play, Timer } from 'lucide-react'
 import { AttendanceControl } from './TrainingCalendar'
 import { elapsedSeconds, formatSessionDuration, useElapsedSeconds, type SessionClock } from './lib/guide-position'
 import type { WorkoutDay } from './types'
+import type { SetLog } from './lib/workout-sets'
 import './active-session.css'
 
 export type SessionReview = 'finish' | 'discard' | null
@@ -10,6 +11,7 @@ export type SessionReview = 'finish' | 'discard' | null
 type Props = {
   day: WorkoutDay
   cardioActivity?: string
+  setLog?: SetLog
   date: string
   clock?: SessionClock
   review: SessionReview
@@ -25,7 +27,7 @@ type Props = {
   pendingSave: boolean
 }
 
-export function ActiveSessionControls({day,date,cardioActivity,clock,review,setReview,pause,resume,minimize,continueWorkout,unavailable,discard,onRegistered,notify,pendingSave}:Props) {
+export function ActiveSessionControls({day,date,cardioActivity,setLog,clock,review,setReview,pause,resume,minimize,continueWorkout,unavailable,discard,onRegistered,notify,pendingSave}:Props) {
   const seconds = useElapsedSeconds(clock)
   const paused = clock?.runningSince === null
   const state = paused ? 'Entrenamiento en pausa' : 'Entrenamiento en curso'
@@ -84,12 +86,13 @@ export function ActiveSessionControls({day,date,cardioActivity,clock,review,setR
       onCancel={event=>{event.preventDefault();if(!saving)setReview(null)}}>
       <h2 id={headingId}>{review==='discard'?'¿Cancelar este entrenamiento?':'¿Finalizar entrenamiento?'}</h2>
       <p id={descriptionId}>{review==='discard'
-        ?'Se descartará el tiempo de esta sesión y no contará como día entrenado. Tu rutina y tus registros anteriores se conservarán.'
-        :'Al guardar, esta sesión contará como día entrenado en Progreso.'}</p>
+        ?'Se descartarán el tiempo y las series anotadas en esta sesión. Tu rutina y tus entrenamientos anteriores se conservarán.'
+        :'Al guardar, el resumen quedará en tu calendario y la sesión contará en Progreso.'}</p>
       {review==='finish'&&<div className="live-review-summary"><strong>{day.title}</strong>
-        {seconds!==null&&<span>Tiempo de entrenamiento <b>{formatSessionDuration(seconds)}</b></span>}</div>}
+        {seconds!==null&&<span>Tiempo de entrenamiento <b>{formatSessionDuration(seconds)}</b></span>}
+        {day.type==='strength'&&setLog&&<span>Series anotadas <b>{Object.values(setLog).reduce((n,rows)=>n+rows.length,0)}</b></span>}</div>}
       <div className="live-review-actions">
-        {review==='finish'&&<AttendanceControl date={date} day={day} cardioActivity={cardioActivity} notify={notify} finishGuide onRegistered={onRegistered}
+        {review==='finish'&&<AttendanceControl date={date} day={day} cardioActivity={cardioActivity} setLog={setLog} notify={notify} finishGuide onRegistered={onRegistered}
           sessionReview={{stopClock,setBusy:setSaving}}/>}
         <button type="button" ref={stay} className={review==='discard'?'primary full':'secondary full'} disabled={saving} onClick={()=>setReview(null)}>
           {paused?'Volver a la sesión':'Seguir entrenando'}

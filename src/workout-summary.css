@@ -74,3 +74,21 @@
 .workout-summary li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .workout-summary .summary-activity { margin: .35rem 0 0; color: var(--text); }
 .workout-summary svg { flex: none; }
+.workout-summary .summary-set-note {
+  display: block;
+  margin-top: .2rem;
+  color: var(--muted);
+  font-size: .8rem;
+}
+.workout-summary .summary-sets {
+  display: grid;
+  gap: .22rem;
+  margin: .4rem 0 .2rem;
+  padding-inline-start: .6rem;
+  border-inline-start: 2px solid var(--line);
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+}
+.summary-sets > div { display: flex; flex-wrap: wrap; gap: .15rem .8rem; align-items: baseline; }
+.summary-sets dt { min-width: 3.5rem; color: var(--muted); }
+.summary-sets dd { margin: 0; font-weight: 650; }

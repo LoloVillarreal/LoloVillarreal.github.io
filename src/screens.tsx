@@ -3,12 +3,14 @@ import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
 import { ExerciseWeightButton } from './ExerciseWeight'
 import { ExerciseMovement } from './ExerciseMovement'
+import { ExerciseSetLog } from './ExerciseSetLog'
+import type { SetEntry, SetLog } from './lib/workout-sets'
 import { ActiveSessionControls, type SessionReview } from './ActiveSessionControls'
 import { RoutineGifDownload } from './RoutineGifDownload'
 import BarbellDrawing from './BarbellDrawing'
 import { WorkoutReturn, pendingWorkout } from './WorkoutReturn'
 import { exerciseUnit } from './lib/exercise-library'
-import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type SetStateAction } from 'react'
 import { Apple, ArrowLeft, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Heart, Play, Salad } from 'lucide-react'
 import { workoutDays, hevyExport } from './data/training'
 import { foods, menu } from './data/nutrition'
@@ -219,10 +221,11 @@ function focusWorkoutSummary(date:string) {
   })
 }
 
-export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,finish,pause,resume:resumeClock,discard,initialPreview,onDirtyChange}:{
+export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,finish,pause,resume:resumeClock,updateSet,discard,initialPreview,onDirtyChange}:{
   date:string;setDate:(date:string)=>void;notify:Notify;reader:GuidePosition|null;bookmark:GuidePosition|null
   setReader:(position:GuidePosition|null)=>void;finish:(date:string,startedAt?:number|null)=>void
   pause?:(date:string)=>void;resume?:(date:string)=>void;discard?:(date:string,startedAt?:number|null)=>void
+  updateSet?:(date:string,startedAt:number,exerciseId:string,entry:SetEntry)=>boolean
   initialPreview?:GuidePosition|null;onDirtyChange:(dirty:boolean)=>void
 }){
   const account=useAccount(),[editing,setEditing]=useState(false),[removing,setRemoving]=useState(false),[deletedPlan,setDeletedPlan]=useState<TrainingPlan|null>(null)
@@ -246,6 +249,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const recorded = attendanceEntryValid('attendance:'+date,account.values['attendance:'+date])
   const confirmed = attendanceEntryValid('attendance:'+date,account.confirmedValues?.['attendance:'+date])
   const active = bookmark?.date===date && hasPlan && saved.type!=='recovery' && !confirmed
+  const startedAt=active?bookmark.clock?.startedAt:undefined
   const consult = (!active && (date!==isoDate() || recorded)) || selected.type==='recovery'
   useEffect(()=>{
     if(initialPreview?.date===date && consult)setPreview(initialPreview)
@@ -295,6 +299,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const guide=viewingPreview?preview:!consult?reader:null
   const sessionActions={
     clock:bookmark?.clock, pause:()=>pause?.(date), resume:()=>resumeClock?.(date),
+    setLog:active?bookmark.setLog:undefined,
     pendingSave:recorded&&!confirmed,
     discard:()=>{
       (discard??finish)(date,bookmark?.clock?.startedAt??null)
@@ -305,6 +310,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   }
   if(hasPlan && !editing && pickingDate!==date && guide?.date===date)return <SessionView key={date+':'+(viewingPreview?'consulta':bookmark?.clock?.startedAt??'anterior')} day={selected} date={date} index={guide.index}
     cardio={saved.cardio} notes={saved.notes} preview={viewingPreview} onStep={index=>viewingPreview?setPreview({date,index}):setReader({date,index})}
+    onSet={startedAt!==undefined&&updateSet?(id,entry)=>updateSet(date,startedAt,id,entry):undefined}
     {...sessionActions}
     onExit={()=>closeGuide('summary')} notify={notify} onRegistered={confirmedRegistration}/>
   if(bookmark?.date===date&&!recorded&&(!hasPlan||saved.type==='recovery'))return <>
@@ -363,9 +369,10 @@ function NonStrengthGuide({day,cardio}:{day:WorkoutDay;cardio?:{activity:string;
   return day.type==='cardio'?<section className="card cardio-guide"><span className="illustrated-symbol">🚶‍♀️</span><h2>Muévete a un ritmo cómodo</h2><p>{cardio?`Tu selección: ${cardio.minutes} minutos de ${cardioLabel(cardio.activity).toLocaleLowerCase('es')}, ajustados a tus sensaciones.`:'Referencia de la sesión: 25–45 minutos de caminata, bicicleta o elíptica, adaptados a tu recuperación.'}</p><ul><li>Empieza suave y aumenta gradualmente.</li><li>Un ritmo moderado permite hablar sin quedarte sin aire.</li><li>Termina bajando el ritmo.</li></ul><div className="goal-callout"><strong>Objetivo de hoy</strong><p>Actividad cardiovascular y recuperación.{day.day===3?' El miércoles es exclusivamente de cardio':''}</p></div></section>:<section className="card cardio-guide"><span className="illustrated-symbol">🌿</span><h2>Recuperar también es avanzar</h2><p>Descansar, caminar si te apetece o hacer movilidad suave. Sin fuerza programada ni un objetivo rígido de pasos.</p></section>
 }
 
-function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,discard,pendingSave,onStep,onExit,notify,onRegistered}:{
+function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,discard,pendingSave,setLog,onSet,onStep,onExit,notify,onRegistered}:{
   day:WorkoutDay;date:string;index:number;cardio?:{activity:string;minutes:number};notes:string;preview:boolean
   clock?:SessionClock;pause:()=>void;resume:()=>void;discard:()=>void;pendingSave:boolean
+  setLog?:SetLog;onSet?:(exerciseId:string,entry:SetEntry)=>boolean
   onStep:(index:number)=>void;onExit:()=>void;notify:Notify;onRegistered:()=>void
 }) {
   const count=day.exercises.length
@@ -392,7 +399,7 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
     focusExercise()
   },[date,step])
   return <section className="training-session" ref={page} tabIndex={-1} aria-label={day.title}>
-    {!preview&&<ActiveSessionControls day={day} date={date} cardioActivity={cardio?.activity} clock={clock} pause={pause} resume={resume}
+    {!preview&&<ActiveSessionControls day={day} date={date} cardioActivity={cardio?.activity} setLog={setLog} clock={clock} pause={pause} resume={resume}
       minimize={onExit} discard={discard} notify={notify} onRegistered={onRegistered} pendingSave={pendingSave}
       review={review} setReview={setReview}/>}
     <nav aria-label="Recorrer la guía" onKeyDown={event=>{
@@ -422,7 +429,9 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
     {notes.trim()&&<details className="session-details"><summary>Notas de la sesión</summary><p className="session-note-text">{notes}</p></details>}
     {exercise?<div className="card training-session-card">
       {count>1&&<div className="session-position-track" aria-hidden="true"><i style={{transform:`scaleX(${(step+1)/count})`}}/></div>}
-      <ExerciseGuide exercise={exercise}/>
+      <ExerciseGuide exercise={exercise}>{!preview&&day.type==='strength'&&onSet&&
+        <ExerciseSetLog key={'sets:'+exercise.id} exercise={exercise} sets={setLog?.[exercise.id]??[]} disabled={pendingSave}
+          onChange={entry=>onSet(exercise.id,entry)}/>}</ExerciseGuide>
       <MachineSettings exerciseId={exercise.hevyId}/>
       {!preview&&<TodayReplacement date={date} exercise={exercise} index={step}/>}
       {!preview&&exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
@@ -443,7 +452,7 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
   </section>
 }
 
-function ExerciseGuide({exercise}:{exercise:Exercise}) {
+function ExerciseGuide({exercise,children}:{exercise:Exercise;children?:ReactNode}) {
   const amount=exercise.reps[0]===exercise.reps[1]?String(exercise.reps[0]):exercise.reps.join('–')
   const unit=exercise.unit==='seconds'?'segundos':exercise.unit==='meters'?'metros':'repeticiones'
   const rest=exercise.rest[0]===exercise.rest[1]?String(exercise.rest[0]):exercise.rest.join('–')
@@ -457,6 +466,7 @@ function ExerciseGuide({exercise}:{exercise:Exercise}) {
       {exercise.rest[1]>0&&<span>Descansa {rest} segundos entre series.</span>}
       <ExerciseWeightButton exerciseName={exercise.name} hevyId={exercise.hevyId}/>
     </div>
+    {children}
     <ExerciseMovement exercise={exercise}/>
     <details key={exercise.id} className="session-details">
       <summary>Cómo hacerlo</summary>

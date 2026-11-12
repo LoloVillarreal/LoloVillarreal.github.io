@@ -81,7 +81,7 @@ function Workspace(){
   const [toast,notify]=useState('')
   const [trainingDirty,setTrainingDirty]=useState(false)
   const [progressIntent,setProgressIntent]=useState<'strength'>()
-  const {reader,bookmark,setReader:changeReader,finish,pause,resume}=useGuidePosition(account.session?.user.id)
+  const {reader,bookmark,setReader:changeReader,finish,pause,resume,updateSet}=useGuidePosition(account.session?.user.id)
   const [initialPreview,setInitialPreview]=useState<GuidePosition|null>(null)
   const activeDate=bookmark?.date
   const confirmedDay=activeDate && attendanceEntryValid('attendance:'+activeDate,account.confirmedValues['attendance:'+activeDate])
@@ -203,7 +203,7 @@ function Workspace(){
       {section==='home'&&<HomeScreen key={homeVisit} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining}
         onOpenPlates={()=>{if(go('nutrition'))setNavigation(v=>({...v,tool:'plates'}))}}
         onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
-      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>{setInitialPreview(null);setNavigation(v=>({...v,trainingDate:date}))}} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} initialPreview={initialPreview} pause={pause} resume={resume} discard={finish} finish={finish} onDirtyChange={setTrainingDirty}/>}
+      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>{setInitialPreview(null);setNavigation(v=>({...v,trainingDate:date}))}} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} initialPreview={initialPreview} pause={pause} resume={resume} updateSet={updateSet} discard={finish} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''}
         barCalculator={<BarbellCalculator setup={barSetup} setSetup={setBarSetup} gym={gym}/>}
         setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}

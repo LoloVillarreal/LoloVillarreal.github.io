@@ -52,6 +52,42 @@ describe('días entrenados',()=>{
       expect(attendanceEntryValid('attendance:'+date,{...receipt,exerciseNames:names})).toBe(false)
     }
   })
+  it('mantiene las series del ejercicio sustituido separadas de su sustituto después de cambiar el orden',()=>{
+    const date='2026-11-09'
+    const plan=replaceForDate(date,undefined,0,'hip-thrust','Hip thrust en máquina')
+    plan.exercises=plan.exercises.slice(0,2).reverse()
+    const day=workoutForDate(date,plan)
+    const activeSets=[{number:2,kg:20.5,amount:9}]
+    const receipt=createAttendance(date,day,{setLog:{
+      [day.exercises[1].id]:activeSets,
+      'hip-thrust':[{number:1,kg:0},{number:3,amount:8}],
+      plank:[{number:1,amount:40}],
+      'id-obsoleto':[{number:1,kg:30}],
+    }})
+    activeSets[0].kg=50
+    day.exercises.reverse()
+    expect(receipt.exerciseNames).toEqual(['Peso muerto rumano con barra','Hip thrust en máquina','Hip thrust con barra','Plancha'])
+    expect(receipt.performedSets).toEqual([
+      {exerciseIndex:1,unit:'reps',sets:[{number:2,kg:20.5,amount:9}]},
+      {exerciseIndex:2,unit:'reps',sets:[{number:1,kg:0},{number:3,amount:8}],replaced:true},
+      {exerciseIndex:3,unit:'seconds',sets:[{number:1,amount:40}],replaced:true},
+    ])
+    expect(attendanceEntryValid('attendance:'+date,receipt)).toBe(true)
+    expect(createAttendance(date,day,{setLog:{}})).not.toHaveProperty('performedSets')
+  })
+  it('rechaza copias con series ambiguas o inválidas y conserva sesiones anteriores sin series',()=>{
+    const date='2026-10-19',key='attendance:'+date
+    const receipt={...attended(date,'strength'),exerciseNames:['Hip thrust','Plancha']}
+    const group={exerciseIndex:1,unit:'seconds',sets:[{number:1,kg:0,amount:30}]}
+    expect(attendanceEntryValid(key,receipt)).toBe(true)
+    expect(attendanceEntryValid(key,{...receipt,performedSets:[group]})).toBe(true)
+    for(const performedSets of [[],[group,group],[{...group,exerciseIndex:2}],[{...group,unit:'kg'}],
+      [{...group,sets:[{number:1}]}],[{...group,sets:[{number:1,kg:Infinity}]}],[{...group,sets:[{number:1,amount:2.5}]}],
+      [{...group,sets:[{number:2,kg:5},{number:1,kg:6}]}],[{...group,exerciseIndex:0,replaced:true}]]){
+      expect(attendanceEntryValid(key,{...receipt,performedSets})).toBe(false)
+    }
+    expect(attendanceEntryValid(key,{...receipt,type:'cardio',exerciseNames:['Correr'],performedSets:[{...group,exerciseIndex:0}]})).toBe(false)
+  })
   it('lee solo asistencias válidas, ordenadas por fecha; preparar una rutina no cuenta como entrenar',()=>{
     expect(attendanceFromValues({
       'attendance:2026-10-22':attended('2026-10-22'),

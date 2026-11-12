@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 'react'
 import { validDate } from './dates'
+import { readSetLog, replaceSet, type SetEntry, type SetLog } from './workout-sets'
 
 export type SessionClock = { startedAt: number; elapsedMs: number; runningSince: number | null }
-export type GuidePosition = { date: string; index: number; clock?: SessionClock }
+export type GuidePosition = { date: string; index: number; clock?: SessionClock; setLog?: SetLog }
 type Bookmark = GuidePosition & { open: boolean }
 const memory = new Map<string, string | null>()
 const bookmarkKey = (owner: string) => 'la-guide:' + owner
@@ -22,7 +23,9 @@ function bookmarkFrom(raw: string | null): Bookmark | null {
     const validClock = clock && Number.isSafeInteger(clock.startedAt) && clock.startedAt >= 0 &&
       Number.isSafeInteger(clock.elapsedMs) && clock.elapsedMs >= 0 &&
       (clock.runningSince === null || Number.isSafeInteger(clock.runningSince) && clock.runningSince >= 0)
-    return validClock ? {date, index, open, clock} : {date, index, open}
+    if (!validClock) return {date, index, open}
+    const setLog = readSetLog(saved.setLog)
+    return {date, index, open, clock, ...(setLog && {setLog})}
   } catch { return null }
 }
 
@@ -118,8 +121,19 @@ export function useGuidePosition(owner?: string) {
         if (!position) return current?.open ? {...current, open: false} : current
         if (!validDate(position.date) || !Number.isInteger(position.index) || position.index < 0 || position.index >= 30) return current
         if (current && current.date !== position.date) return current
-        return {date: position.date, index: position.index, open: true, clock: current?.clock ?? startedClock(Date.now())}
+        return {...current, date: position.date, index: position.index, open: true, clock: current?.clock ?? startedClock(Date.now())}
       })
+    },
+    updateSet(date: string, startedAt: number, exerciseId: string, entry: SetEntry) {
+      let accepted = false
+      change(current => {
+        if (current?.date !== date || !current.clock || current.clock.startedAt !== startedAt) return current
+        const setLog = replaceSet(current.setLog, exerciseId, entry)
+        if (setLog === false) return current
+        accepted = true
+        return setLog === current.setLog ? current : {...current, setLog}
+      })
+      return accepted
     },
     pause(date: string) {
       return change(current => {
