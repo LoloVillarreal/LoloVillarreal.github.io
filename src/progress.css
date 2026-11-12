@@ -105,6 +105,27 @@
 .strength-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .strength-metrics .metric{padding:12px;box-shadow:none;background:var(--surface2)}
 .strength-metrics .metric strong{font-size:1.2rem}
+.hip-goal-panel { margin-top:16px; padding-top:12px; border-top:1px solid var(--line); }
+.milestone-header,.month-switch { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.milestone-header h3 { margin:0; font-size:1rem; }
+.milestone-header .text-button { min-height:44px; padding:4px 2px; flex:none; }
+.hip-goal-panel p,.progress-month .month-lift p { margin:4px 0 0; }
+.hip-goal-value { font-size:1.25rem; font-weight:750; font-variant-numeric:tabular-nums; }
+.goal-achieved,.month-lift strong { color:var(--olive); }
+.hip-goal-form .form-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+.hip-goal-form .button-row { margin-top:10px; flex-wrap:wrap; }
+.progress-month .month-switch { margin:12px 0 8px; }
+.month-switch .icon-button { min-height:44px; min-width:44px; display:grid; place-items:center; }
+.month-switch strong { text-align:center; font-size:.95rem; }
+.month-switch strong::first-letter { text-transform:uppercase; }
+.month-activity { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; }
+.month-activity div { padding:10px 12px; border-radius:12px; background:var(--surface2); }
+.month-activity dt,.month-lift>span { color:var(--muted); font-size:.82rem; }
+.month-activity dd { margin:0; font-size:1.55rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.month-lift { display:grid; margin-top:12px; }
+.month-lift button { min-height:44px; display:flex; align-items:center; flex-wrap:wrap; gap:8px; text-align:left; padding:0; }
+.month-lift small { font-size:.82rem; color:var(--muted); }
+@media (min-width:760px) { .workspace.workspace--progress > .progress-month { grid-column:auto; } }
 @media(min-width:760px) {
   .workspace.workspace--progress { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); align-items: start; }
   .workspace--progress > :is(.attendance-summary,.progress-capture,.strength-snapshot,.progress-overview) { grid-column: auto; }

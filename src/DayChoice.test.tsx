@@ -59,6 +59,26 @@ it('exige elegir también la rutina de fuerza en un viernes opcional',async()=>{
   expect(account.set).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Guardar mi elección'}))
   await waitFor(()=>expect(account.values['training:2026-11-13']).toMatchObject({title:'Tren superior y abdomen'}))
 })
+
+it('muestra ambas versiones y guarda la corta solo en la fecha elegida',async()=>{
+  const date='2026-11-12', other='training:2026-11-09'
+  const untouched={title:'Mi sesión personalizada'}
+  account.values[other]=untouched
+  mount(date)
+  fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
+  fireEvent.click(screen.getByRole('button',{name:/Glúteos y femorales/}))
+  expect(screen.getByText('Sentadilla búlgara con mancuernas')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button',{name:'Tengo 20 min'}))
+  expect(screen.queryByText('Sentadilla búlgara con mancuernas')).toBeNull()
+  expect(screen.getByText('Hip thrust con barra')).toBeTruthy()
+  expect(account.set).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button',{name:'Guardar mi elección'}))
+  await waitFor(()=>expect(account.values['training:'+date]).toMatchObject({
+    title:'Glúteos y femorales · 20 min', exercises:[{exerciseId:'hip-thrust',sets:2,rest:150},{exerciseId:'lying-curl',sets:2,rest:90}],
+  }))
+  expect(account.values[other]).toBe(untouched)
+  expect(Object.keys(account.values)).toHaveLength(2)
+})
 it('permite revisar las fotos antes de decidir y solo abre la sesión de hoy después de confirmar el guardado',async()=>{
   vi.setSystemTime(new Date('2026-11-12T12:00:00'))
   const saved=vi.fn()
@@ -66,7 +86,7 @@ it('permite revisar las fotos antes de decidir y solo abre la sesión de hoy des
     mount('2026-11-12',saved)
     fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
     fireEvent.click(screen.getByRole('button',{name:/Glúteos y femorales/}))
-    fireEvent.click(screen.getByRole('button',{name:/Ver los .* ejercicios/}))
+    fireEvent.click(screen.getByRole('button',{name:"Ver fotos y técnica"}))
     expect(screen.getByRole('button',{name:/Ver foto y técnica de Hip thrust/})).toBeTruthy()
     expect(account.set).not.toHaveBeenCalled()
     account.flush.mockResolvedValueOnce(undefined).mockRejectedValueOnce(Error('Sin conexión'))
@@ -95,7 +115,7 @@ it('mantiene la vista previa al comparar rutinas y devuelve el foco al cerrarla 
   fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
   const glutes=screen.getByRole('button',{name:/Glúteos y femorales/})
   fireEvent.click(glutes)
-  const preview=screen.getByRole('button',{name:/Ver los .* ejercicios/})
+  const preview=screen.getByRole('button',{name:"Ver fotos y técnica"})
   fireEvent.click(preview)
   fireEvent.click(glutes)
   expect(screen.getByRole('region',{name:'Guía temporal'})).toBeTruthy()
@@ -112,7 +132,7 @@ it('al cancelar la creación conserva la rutina, la vista previa y el foco de re
   mount('2026-11-12')
   fireEvent.click(screen.getByRole('button',{name:'Fuerza'}))
   fireEvent.click(screen.getByRole('button',{name:/Glúteos y femorales/}))
-  fireEvent.click(screen.getByRole('button',{name:/Ver los .* ejercicios/}))
+  fireEvent.click(screen.getByRole('button',{name:"Ver fotos y técnica"}))
   fireEvent.click(screen.getByRole('button',{name:'Elegir mis ejercicios'}))
   fireEvent.click(screen.getByRole('button',{name:'Cerrar biblioteca'}))
   const reload=new Event('beforeunload',{cancelable:true})

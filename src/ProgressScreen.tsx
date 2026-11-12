@@ -5,6 +5,8 @@ import { attendanceFromValues, attendanceStats } from './lib/attendance'
 import { hipThrustProgress, movingAverage } from './lib/calculations'
 import { addDays, isoDate, mondayOf, parseDate, shortDate, validDate } from './lib/dates'
 import { emptyProgress, progressDraft, progressEntry } from './lib/progress-entry'
+import { hipMarksThrough } from './lib/hip-goal'
+import { HipGoalPanel, MonthlyReport } from './ProgressMilestones'
 import type { ProgressDraft, ProgressLog } from './types'
 
 const ProgressChart = lazy(() => import('./ProgressChart'))
@@ -30,7 +32,7 @@ function sameDraft(a:ProgressDraft,b:ProgressDraft) {
 function Metric({label,value,sub}:{label:string;value:string;sub:string}){return <article className="metric"><p>{label}</p><strong>{value}</strong><small>{sub}</small></article>}
 
 export function AttendanceSummary({compact=false,onTraining}:{compact?:boolean;onTraining?:()=>void}){
-  const account=useAccount(),entries=attendanceFromValues(account.values),today=isoDate()
+  const account=useAccount(),entries=attendanceFromValues(account.confirmedValues),today=isoDate()
   const stats=attendanceStats(entries,today),trainedDates=new Set(entries.map(entry=>entry.date))
   if(!account.session)return null
   if(account.loading)return <section className="card attendance-summary" role="status">Recuperando tus días entrenados…</section>
@@ -40,7 +42,7 @@ export function AttendanceSummary({compact=false,onTraining}:{compact?:boolean;o
         <h2>{compact?'Tu asistencia':'Días entrenados'}</h2>
         <p className="week-count"><strong>{stats.week}</strong> {stats.week===1?'día esta semana':'días esta semana'}</p>
       </div>
-      {onTraining&&<button className="text-button" aria-label="Ver calendario de entrenamientos" onClick={onTraining}><CalendarDays size={17} aria-hidden="true"/>Calendario</button>}
+      {onTraining&&<button className="text-button" aria-label="Ver calendario de entrenamientos" onClick={()=>onTraining()}><CalendarDays size={17} aria-hidden="true"/>Calendario</button>}
     </div>
     <ol className="progress-week" aria-label="Asistencia de la semana">
       {['L','M','X','J','V','S','D'].map((letter,index)=>{
@@ -63,7 +65,7 @@ export function AttendanceSummary({compact=false,onTraining}:{compact?:boolean;o
   </section>
 }
 
-type ProgressProps={hide:boolean;notify:Notify;onTraining:()=>void;initialCapture?:'strength'}
+type ProgressProps={hide:boolean;notify:Notify;onTraining:(date?:string)=>void;initialCapture?:'strength'}
 
 export function ProgressScreen({hide,notify,onTraining,initialCapture}:ProgressProps){
   return <AccountGate><ProgressDashboard hide={hide} notify={notify} onTraining={onTraining} initialCapture={initialCapture}/></AccountGate>
@@ -72,6 +74,8 @@ export function ProgressScreen({hide,notify,onTraining,initialCapture}:ProgressP
 function ProgressDashboard({hide,notify,onTraining,initialCapture}:ProgressProps){
   const account=useAccount()
   const logs=Object.entries(account.values).filter(([key])=>key.startsWith('progress:')).map(([,value])=>value as ProgressLog)
+  const confirmedLogs=Object.entries(account.confirmedValues).filter(([key])=>key.startsWith('progress:')).map(([,value])=>value as ProgressLog)
+  const confirmedMarks=hipMarksThrough(confirmedLogs,isoDate())
   const [form,setForm]=useCloudValue<ProgressDraft>('progressDraft',emptyProgress)
   const [goal,setGoal]=useCloudValue('personalGoal','')
   const [capture,setCapture]=useState<Capture|null>(hide?null:'weight'),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
@@ -81,8 +85,8 @@ function ProgressDashboard({hide,notify,onTraining,initialCapture}:ProgressProps
   const launcher=useRef<HTMLElement|null>(null)
   const existing=logs.find(log=>log.id===form.id)
   const pendingDraft=existing?!sameDraft(form,progressDraft(existing)):Boolean(hasDraft(form))
-  const weights=movingAverage(logs),lastWeight=weights[weights.length-1],firstWeight=weights[0]
-  const {history:strength,best,first,latest,gain}=hipThrustProgress(logs)
+  const weights=movingAverage(confirmedLogs),lastWeight=weights[weights.length-1],firstWeight=weights[0]
+  const {history:strength,best,first,latest,gain}=hipThrustProgress(confirmedMarks)
   const [strengthExpanded,setStrengthExpanded]=useState(false)
   const [weightExpanded,setWeightExpanded]=useState(false)
   const latestOnDate=(date:string)=>[...logs].reverse().find(log=>log.date===date)
@@ -173,7 +177,9 @@ function ProgressDashboard({hide,notify,onTraining,initialCapture}:ProgressProps
           <p className="small-note">Compara marcas de la misma variante, recorrido y repeticiones.</p>
         </details>:<p className="small-note">Con tu próxima marca podrás comparar las dos sesiones.</p>}
       </>:<p className="progress-empty">Anota tu primera serie en «Hip thrust» para ver aquí tu carga máxima y su evolución.</p>}
+      <HipGoalPanel key={account.session?.user.id} marks={confirmedMarks}/>
     </section>
+    <MonthlyReport attendance={attendanceFromValues(account.confirmedValues)} marks={confirmedMarks} complete={account.complete} onDate={onTraining}/>
     <section className="card progress-overview"><h2>Peso corporal</h2>
       {hide?<p className="progress-empty">Has ocultado el peso y las medidas en Ajustes.</p>:lastWeight&&firstWeight?<>
         <div className="progress-key-metrics">
@@ -183,7 +189,7 @@ function ProgressDashboard({hide,notify,onTraining,initialCapture}:ProgressProps
         {weights.length>1?<details className="progress-weight" onToggle={event=>setWeightExpanded(event.currentTarget.open)}><summary>Ver tendencia de peso</summary>{weightExpanded&&<Suspense fallback={chartLoading}><ProgressChart kind="weight" points={weights.map(log=>({fecha:shortDate(log.date),peso:log.weight,media:+log.average.toFixed(2)}))}/></Suspense>}<p className="small-note">Peso registrado y media de los últimos 3 registros con peso.</p></details>:<p className="small-note">La tendencia aparece al registrar un segundo peso.</p>}
       </>:<p className="progress-empty">Cuando anotes tu peso, aquí verás cómo cambia con el tiempo.</p>}
     </section>
-    <section className="card progress-history"><div className="section-head"><h2>Historial de progreso</h2><span className="status">{logs.length}</span></div>{logs.length===0&&<p className="empty">Tus registros aparecerán aquí por fecha. Podrás editarlos o eliminarlos.</p>}{[...logs].sort((a,b)=>b.date.localeCompare(a.date)).map(log=><article className="history-entry" key={log.id}><div><strong>{new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(parseDate(log.date))}</strong>{!hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p>{[log.weight===undefined?'':`Peso ${fmt(log.weight)} kg`,log.waist===undefined?'':`Cintura ${fmt(log.waist)} cm`,log.hip===undefined?'':`Cadera ${fmt(log.hip)} cm`].filter(Boolean).join(' · ')}</p>}{log.hipThrustKg!==undefined&&<p>Hip thrust: <b>{fmt(log.hipThrustKg)} kg{log.hipThrustReps?` × ${log.hipThrustReps}`:''}</b></p>}{(log.energy!==undefined||log.sleep!==undefined)&&<p>{[log.energy===undefined?'':`Energía del día: ${energyLabels[log.energy-1]??log.energy} (${log.energy}/5)`,log.sleep===undefined?'':`Sueño: ${fmt(log.sleep)} h`].filter(Boolean).join(' · ')}</p>}{hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p className="small-note">Peso y medidas ocultos</p>}{log.notes&&<p className="entry-notes">{log.notes}</p>}</div><div className="button-row"><button className="secondary" disabled={busy} onClick={event=>edit(log,event.currentTarget)}>Editar</button><button className="text-button" disabled={busy} onClick={async()=>{if(!confirm(`¿Eliminar el registro del ${shortDate(log.date)}? Se recalcularán sus gráficas y podrás deshacerlo.`))return;setBusy(true);try{await account.remove(`progress:${log.id}`);setDeleted(log);if(form.id===log.id){setForm(emptyProgress());setOpen(false)}notify('Registro eliminado. Puedes deshacerlo.')}catch{notify('No se pudo eliminar. Comprueba la conexión y reintenta.')}finally{setBusy(false)}}}>Eliminar</button></div></article>)}{deleted&&<div className="undo-strip"><span>Registro eliminado · {shortDate(deleted.date)}{logs.some(log=>log.date===deleted.date)&&' · Ya hay otro registro de esta fecha; revísalo antes de recuperar este.'}</span><button className="secondary" disabled={busy||logs.some(log=>log.date===deleted.date)} onClick={async()=>{setBusy(true);try{account.set(`progress:${deleted.id}`,deleted);await account.flush();setDeleted(null);notify('Registro recuperado.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setBusy(false)}}}>Deshacer</button></div>}</section>
+    <section className="card progress-history"><div className="section-head"><h2>Historial de progreso</h2><span className="status">{confirmedLogs.length}</span></div>{confirmedLogs.length===0&&<p className="empty">Tus registros aparecerán aquí por fecha. Podrás editarlos o eliminarlos.</p>}{[...confirmedLogs].sort((a,b)=>b.date.localeCompare(a.date)).map(log=><article className="history-entry" key={log.id}><div><strong>{new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(parseDate(log.date))}</strong>{!hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p>{[log.weight===undefined?'':`Peso ${fmt(log.weight)} kg`,log.waist===undefined?'':`Cintura ${fmt(log.waist)} cm`,log.hip===undefined?'':`Cadera ${fmt(log.hip)} cm`].filter(Boolean).join(' · ')}</p>}{log.hipThrustKg!==undefined&&<p>Hip thrust: <b>{fmt(log.hipThrustKg)} kg{log.hipThrustReps?` × ${log.hipThrustReps}`:''}</b></p>}{(log.energy!==undefined||log.sleep!==undefined)&&<p>{[log.energy===undefined?'':`Energía del día: ${energyLabels[log.energy-1]??log.energy} (${log.energy}/5)`,log.sleep===undefined?'':`Sueño: ${fmt(log.sleep)} h`].filter(Boolean).join(' · ')}</p>}{hide&&(log.weight!==undefined||log.waist!==undefined||log.hip!==undefined)&&<p className="small-note">Peso y medidas ocultos</p>}{log.notes&&<p className="entry-notes">{log.notes}</p>}</div><div className="button-row"><button className="secondary" disabled={busy} onClick={event=>edit(log,event.currentTarget)}>Editar</button><button className="text-button" disabled={busy} onClick={async()=>{if(!confirm(`¿Eliminar el registro del ${shortDate(log.date)}? Se recalcularán sus gráficas y podrás deshacerlo.`))return;setBusy(true);try{await account.remove(`progress:${log.id}`);setDeleted(log);if(form.id===log.id){setForm(emptyProgress());setOpen(false)}notify('Registro eliminado. Puedes deshacerlo.')}catch{notify('No se pudo eliminar. Comprueba la conexión y reintenta.')}finally{setBusy(false)}}}>Eliminar</button></div></article>)}{deleted&&<div className="undo-strip"><span>Registro eliminado · {shortDate(deleted.date)}{logs.some(log=>log.date===deleted.date)&&' · Ya hay otro registro de esta fecha; revísalo antes de recuperar este.'}</span><button className="secondary" disabled={busy||logs.some(log=>log.date===deleted.date)} onClick={async()=>{setBusy(true);try{account.set(`progress:${deleted.id}`,deleted);await account.flush();setDeleted(null);notify('Registro recuperado.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setBusy(false)}}}>Deshacer</button></div>}</section>
     <section className="card progress-goal"><details><summary>Mi objetivo personal</summary><label>¿Qué te gustaría conseguir?<input maxLength={500} value={goal} onChange={e=>setGoal(e.target.value)} placeholder="Por ejemplo, mejorar mi hip thrust con buena técnica"/></label><p className="small-note">Se guarda en tu cuenta. Puedes cambiarlo cuando quieras.</p></details></section>
   </>
 }

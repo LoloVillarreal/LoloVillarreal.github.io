@@ -8,20 +8,34 @@ import type { ProgressLog } from './types'
 
 const save = vi.hoisted(() => vi.fn())
 let values: Record<string, ProgressLog> = {}
+let confirmed: Record<string, ProgressLog> | undefined
 vi.mock('./lib/account', () => ({
   AccountGate: ({ children }: { children: ReactNode }) => children,
   useCloudValue: <T,>(_key: string, initial: T | (() => T)) => useState(initial),
   useAccount: () => ({
     values,
+    confirmedValues: confirmed ?? values,
+    complete: true,
     set: save,
     flush: async () => {},
   }),
 }))
 beforeEach(() => {
+  confirmed = undefined
   values = { 'progress:test': { id: 'test', date: isoDate(), notes: '', weight: 58, waist: 70, hip: 90 } }
   vi.stubGlobal('requestAnimationFrame', vi.fn())
 })
 afterEach(() => { cleanup(); save.mockClear(); vi.unstubAllGlobals() })
+
+it('el récord solo usa las cargas que la cuenta ha confirmado',()=>{
+  const date=isoDate()
+  confirmed={'progress:real':{id:'real',date,hipThrustKg:50,hipThrustReps:8,notes:''}}
+  values={...confirmed,'progress:pendiente':{id:'pendiente',date,hipThrustKg:80,hipThrustReps:8,notes:''}}
+  render(<ProgressScreen hide notify={vi.fn()} onTraining={vi.fn()}/>)
+  const record=within(screen.getByRole('region',{name:'Hip thrust'}))
+  expect(record.getByText('50')).toBeTruthy()
+  expect(record.queryByText('80')).toBeNull()
+})
 
 it.each(['Hip thrust', 'Bienestar'])('protege las medidas al abrir %s y conserva sus valores al guardar', async (category) => {
   render(<ProgressScreen hide notify={vi.fn()} onTraining={vi.fn()}/>)

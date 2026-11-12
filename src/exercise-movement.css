@@ -1,0 +1,16 @@
+.exercise-movement { margin-block:8px; }
+.movement-toggle {
+  display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:8px 12px;
+  text-align:left; border:1px solid var(--line); border-radius:12px;
+  background:var(--surface2); color:var(--text); font:inherit; font-size:.9rem; font-weight:650;
+}
+.movement-toggle svg { flex:none; color:var(--olive); }
+.movement-toggle small { margin-left:auto; font-weight:500; text-align:right; color:var(--muted); font-size:.74rem; }
+.movement-panel { padding:10px 0 0; }
+.movement-panel video { display:block; width:100%; max-height:50dvh; aspect-ratio:16/9; object-fit:contain; background:#141d19; border-radius:12px; }
+.movement-panel .movement-cue { margin:9px 0; font-size:.9rem; color:var(--text); }
+.movement-offline { display:flex; align-items:center; flex-wrap:wrap; gap:2px 10px; }
+.movement-offline button { display:inline-flex; align-items:center; gap:6px; min-height:44px; }
+.movement-offline small,.movement-credit { color:var(--muted); font-size:.76rem; }
+.movement-credit summary { min-height:44px; align-content:center; }
+.movement-credit p { margin:4px 0 8px; font-size:inherit; overflow-wrap:anywhere; }

@@ -1,0 +1,8 @@
+.routine-duration { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; padding:3px; border-radius:14px; background:var(--surface2); }
+.routine-duration button { min-height:44px; border:1px solid transparent; border-radius:11px; background:transparent; color:var(--text); font:inherit; font-size:.9rem; }
+.routine-duration button[aria-pressed="true"] { background:var(--surface); border-color:var(--line); color:var(--olive); font-weight:700; }
+.routine-lineup { padding:12px 14px; border-left:3px solid var(--olive); background:var(--surface2); border-radius:2px 12px 12px 2px; }
+.routine-lineup strong { font-size:.86rem; }
+.routine-lineup ul { padding:0; margin:5px 0 0; list-style:none; }
+.routine-lineup li { margin:2px 0; line-height:1.45; font-size:.86rem; }
+.routine-lineup small { color:var(--muted); white-space:nowrap; }

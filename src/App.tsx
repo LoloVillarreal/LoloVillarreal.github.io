@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useGuidePosition } from './lib/guide-position'
 import { selectRestSession } from './lib/rest-clock'
 import { useRegisterSW } from 'virtual:pwa-register/react'
@@ -13,6 +13,8 @@ import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
 import { ExerciseWeightProvider } from './ExerciseWeight'
+import { useGymSettings } from './GymInventory'
+import { latestHipMark } from './lib/gym-inventory'
 import SectionSwitch from './SectionSwitch'
 import { pendingWorkout, WorkoutReturn } from './WorkoutReturn'
 import './access.css'
@@ -30,12 +32,14 @@ function Workspace(){
   useEffect(()=>{const change=()=>setRoute(location.hash);window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
+  const gym=useGymSettings()
   useLayoutEffect(()=>{
     if(account.session || !account.loading)selectRestSession(account.session?.user ?? null)
   },[account.session,account.loading])
   const [barSetup,setBarSetup]=useState(initialBarSetup)
   useEffect(()=>{setBarSetup(initialBarSetup())},[account.session?.user.id])
   const [navigation,setNavigation]=useState(()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))
+  const hipMark=useMemo(()=>latestHipMark(account.confirmedValues,navigation.day),[account.confirmedValues,navigation.day])
   const [homeVisit,setHomeVisit]=useState(0)
   const [keyboardHeight,setKeyboardHeight]=useState<number>()
   useEffect(()=>{
@@ -142,7 +146,16 @@ function Workspace(){
       }}>Actualizar</button>
     </div>}
   </>
-  const exerciseCalculator=<BarbellCalculator setup={barSetup} setSetup={setBarSetup} showPlatesByTarget/>
+  const exerciseCalculator={
+    calculator:<BarbellCalculator setup={barSetup} setSetup={setBarSetup} gym={gym} showPlatesByTarget/>,
+    hipMark,
+    prepareHip:(load?:number)=>{
+      const bar=gym.saved?.hipBar
+      if(!bar&&load===undefined)return
+      setBarSetup(s=>({...s,...(bar?{barId:bar.id,barWeights:{...s.barWeights,[bar.id]:String(bar.kg).replace('.',',')}}:{}),
+        ...(load===undefined?{}:{target:String(load).replace('.',',')})}))
+    },
+  }
   if(route==='#prueba-gimnasio')return <ExerciseWeightProvider value={exerciseCalculator}><Suspense fallback={<div className="splash">Abriendo la guía…</div>}><GymPreview key={account.session.user.id} userId={account.session.user.id} onExit={()=>{setNavigation(v=>({...v,section:'home'}));location.hash=''}}/></Suspense></ExerciseWeightProvider>
   if(police)return <>{serviceNotice}{toast&&<p className="toast" role="status">{toast}</p>}<Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onUpdateBlockedChange={setPoliceUpdateBlocked} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense></>
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
@@ -166,9 +179,9 @@ function Workspace(){
         onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
       {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''}
-        barCalculator={<BarbellCalculator setup={barSetup} setSetup={setBarSetup}/>}
+        barCalculator={<BarbellCalculator setup={barSetup} setSetup={setBarSetup} gym={gym}/>}
         setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}
-      {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={()=>go('training',isoDate())}/>}
+      {section==='progress'&&<ProgressScreen initialCapture={progressIntent} hide={settings.hideSensitive} notify={notify} onTraining={(date=isoDate())=>go('training',date)}/>}
       {section==='more'&&<MoreScreen tab={navigation.tab} setTab={tab=>{if(tab==='calc')go('nutrition',undefined,'calc');else setNavigation(v=>({...v,tab}))}} settings={settings} saveSettings={saveSettings} legacyAvailable={workoutLogs.length+cardioLogs.length+progressLogs.length>0||Object.keys(checks).length>0} notify={notify}/>}
     </main>
     </div></div>

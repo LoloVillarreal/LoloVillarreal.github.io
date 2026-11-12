@@ -2,6 +2,7 @@ import { openDB } from 'idb'
 import type { AppSettings, Backup, CardioLog, ProgressLog, WorkoutLog } from '../types'
 import { validDate } from './dates'
 import { trainingEntryValid } from './training-plan'
+import { fitnessPreferenceValid } from './fitness-preferences'
 import { attendanceEntryValid } from './attendance'
 
 const DB_NAME='glute-core-db'
@@ -49,6 +50,7 @@ const cardioValid=(v:unknown)=>baseLog(v)&&modalities.includes(String(v.modality
 const progressValid=(v:unknown)=>baseLog(v)&&['weight','waist','hip','hipThrustKg','hipThrustReps','energy','sleep'].every(k=>optionalNumber(v[k]))&&text(v.notes)&&(v.photo===undefined||text(v.photo))
 
 function localValueValid(key:string,v:unknown):boolean{
+  if(fitnessPreferenceValid(key,v))return true
   if(key.startsWith('training:'))return trainingEntryValid(key,v)
   if(key.startsWith('attendance:'))return attendanceEntryValid(key,v)
   if(key==='settings')return settingsValid(v)

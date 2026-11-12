@@ -1,6 +1,8 @@
+import { MachineSettings } from './MachineSettings'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ExerciseWeightButton } from './ExerciseWeight'
+import { ExerciseMovement } from './ExerciseMovement'
 import { guideByName } from './lib/exercise-guides'
 import { X, ZoomIn } from 'lucide-react'
 import { alternativeExercise, catalogById, equipmentNames, exerciseImage, muscleNames } from './lib/exercise-library'
@@ -15,7 +17,9 @@ export function ExerciseDetails({exercise,onClose}:{exercise:Exercise;onClose:()
  const ref=useRef<HTMLDialogElement>(null),titleId=useId(),row=catalogById.get(exercise.hevyId),technique=techniqueFor(exercise)
  useEffect(()=>{const dialog=ref.current!,overflow=document.body.style.overflow;document.body.style.overflow='hidden';dialog.showModal();return()=>{dialog.close();document.body.style.overflow=overflow}},[])
  return <dialog ref={ref} className="exercise-details" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();e.stopPropagation();onClose()}} onClick={e=>{if(e.target===e.currentTarget){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onClose()}}}><header><div><h2 id={titleId}>{exercise.name}</h2></div><button className="icon-button" aria-label="Cerrar ficha" onClick={onClose}><X/></button></header><img className="exercise-details-image" src={exerciseImage(exercise)} onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src='./exercise-placeholder.svg'}} alt={`Demostración de ${exercise.name}`} width="432" height="432"/><div className="exercise-details-copy">
-   <ExerciseWeightButton exerciseName={exercise.name}/>
+   <ExerciseMovement exercise={exercise}/>
+   <ExerciseWeightButton exerciseName={exercise.name} hevyId={exercise.hevyId}/>
+   <MachineSettings exerciseId={exercise.hevyId}/>
    <h3>Qué trabaja</h3><p><strong>Principal:</strong> {row?muscleNames[row.primary_muscle_group]??exercise.muscle:exercise.muscle}</p>{!!row?.secondary_muscle_groups.length&&<p><strong>También participa:</strong> {[...new Set(row.secondary_muscle_groups.map(m=>muscleNames[m]??m))].join(', ')}.</p>}{row&&<p><strong>Material:</strong> {equipmentNames[row.equipment]??row.equipment}</p>}<h3>Cómo hacerlo</h3>{technique.general&&<p className="small-note">Guía básica del movimiento; ajusta los apoyos a la variante y al equipo de tu gimnasio.</p>}<p>{technique.text}</p>{exercise.avoid&&<p className="warning">{exercise.avoid}</p>}<p className="small-note">Usa un recorrido controlado y una carga con la que puedas mantener la técnica.</p>{exercise.alternatives.length>0&&<><h3>Alternativas</h3><ExerciseAlternatives names={exercise.alternatives}/></>}<details><summary>Referencia y nombre original</summary><p>{exercise.hevyName}</p><a href={technique.source??"https://www.hevyapp.com/exercises/"} target="_blank" rel="noreferrer">{technique.source?'Referencia de técnica ↗':'Biblioteca de Hevy ↗'}</a></details></div></dialog>
 }
 

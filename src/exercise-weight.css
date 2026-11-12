@@ -30,3 +30,37 @@ body:has(.exercise-weight-sheet[open]) { overflow:hidden; }
 }
 .exercise-plate-answer strong { color:var(--olive); }
 .exercise-weight-sheet :focus-visible,.exercise-weight-open:focus-visible { outline:2px solid var(--olive); outline-offset:2px; }
+
+.exercise-last-load {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; min-height:48px; margin:6px 0; padding:7px 10px; border:1px solid var(--line); border-radius:13px;
+  background:var(--surface); color:var(--text); text-align:left;
+}
+.exercise-last-load .last-load-copy { display:grid; gap:3px; min-width:0; }
+.exercise-last-load small { font-size:.77rem; color:var(--muted); }
+.exercise-last-load strong { font-size:1rem; color:var(--text); font-variant-numeric:tabular-nums; }
+.exercise-last-load .last-load-action { display:flex; align-items:center; gap:2px; color:var(--olive); font-size:.8rem; font-weight:700; }
+.last-load-action svg { flex-shrink:0; }
+.gym-inventory-toggle {
+  background:transparent; color:var(--olive); min-height:44px; border:0; font:inherit;
+  font-weight:700; font-size:.86rem;
+}
+.gym-inventory-panel { margin-top:9px; border-block:1px solid var(--line); }
+.gym-inventory-toggle {
+  display:flex; align-items:center; width:100%; gap:7px; padding:5px 1px; text-align:left;
+}
+.gym-inventory-toggle small { margin-left:auto; color:var(--muted); font-size:.75rem; font-weight:500; }
+.gym-inventory-toggle[aria-expanded=true] > svg:last-child { transform:rotate(180deg); }
+.gym-inventory-form { padding:4px 0 12px; }
+.gym-inventory-form fieldset { min-width:0; border:0; padding:0; margin:0; }
+.gym-inventory-form label { display:grid; gap:4px; }
+.gym-inventory-form input:not([type=checkbox]),.gym-inventory-form select {
+  width:100%; min-height:44px; padding:6px 9px; font-size:1rem;
+}
+.gym-inventory-form .gym-inventory-limit { display:flex; gap:8px; align-items:center; min-height:44px; margin:0; }
+.gym-inventory-limit input { width:18px; height:18px; flex:none; }
+.gym-inventory-counts { display:grid; grid-template-columns:repeat(auto-fit,minmax(58px,1fr)); gap:6px 9px; }
+.gym-inventory-counts label { margin:4px 0; font-variant-numeric:tabular-nums; }
+.gym-load-hint { padding:0 12px; color:var(--olive); text-align:center; font-size:.85rem; }
+.gym-stock-unavailable { grid-column:1/-1; margin:0; color:var(--muted); font-size:.85rem; }
+.plate-tile:disabled { opacity:.55; }

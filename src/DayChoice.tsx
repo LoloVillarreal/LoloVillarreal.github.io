@@ -10,6 +10,8 @@ import { cardioLabel } from './lib/cardio-options'
 import { exerciseImage } from './lib/exercise-library'
 import { CardioPicker } from './CardioPicker'
 import { TrainingPlanner } from './TrainingPlanner'
+import { twentyMinuteRoutine } from './lib/short-strength'
+import { RoutineDuration } from './RoutineDuration'
 
 const noDirtyChange = () => {}
 type DayChoiceProps = {
@@ -47,6 +49,7 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
   const account=useAccount()
   const [kind,setKind]=useState(initialKind)
   const [routineDay,setRoutineDay]=useState<number>()
+  const [short,setShort]=useState(false)
   const [activity,setActivity]=useState(''),[minutes,setMinutes]=useState('')
   const [preview,setPreview]=useState(false)
   const [custom,setCustom]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
@@ -85,12 +88,14 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
     return ()=>window.removeEventListener('beforeunload',guard)
   },[hasChoice,custom,customDirty])
 
-  const strength=workoutDays.find(day=>day.day===routineDay && day.type==='strength')
+  const routines=workoutDays.filter(day=>day.type==='strength')
+  const choices=short?routines.map(twentyMinuteRoutine):routines
+  const strength=choices.find(day=>day.day===routineDay)
   const duration=Number(minutes)
   const ready=kind==='recovery'||(kind==='strength'&&!!strength)||(kind==='cardio'&&!!activity&&Number.isInteger(duration)&&duration>=1&&duration<=180)
   function choose(next:TrainingPlan['type']) {
     onBegin()
-    setPreview(false);setKind(next);setRoutineDay(undefined);setActivity('');setMinutes('');setError('')
+    setPreview(false);setKind(next);setRoutineDay(undefined);setShort(false);setActivity('');setMinutes('');setError('')
     requestAnimationFrame(()=>heading.current?.focus({preventScroll:true}))
   }
   async function save(start=false) {
@@ -122,7 +127,7 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
       if(alive.current)setBusy(false)
     }
   }
-  if(custom)return <TrainingPlanner date={date} newRoutine={{previous:previous.current,allowStart:!returnToRecord}} initial={{...planFromRoutine(workoutDays[0]),title:'Mi rutina',exercises:[]}}
+  if(custom)return <TrainingPlanner date={date} newRoutine={{previous:previous.current,allowStart:!returnToRecord,short}} initial={{...planFromRoutine(workoutDays[0]),title:'Mi rutina',exercises:[]}}
     onDirtyChange={setCustomDirty} onCancel={()=>{
       setCustom(false)
       requestAnimationFrame(()=>customButton.current?.focus())
@@ -140,15 +145,19 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
         <ListPlus size={22} aria-hidden="true"/><span>Elegir mis ejercicios</span><ChevronRight size={18} aria-hidden="true"/>
       </button>
       <h3>Rutinas del plan</h3>
-      {workoutDays.filter(day=>day.type==='strength').map(day=><button key={day.day} disabled={busy||written.current}
-        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>setRoutineDay(day.day)}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{day.title}<small>{day.exercises.length} ejercicios</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
+      <RoutineDuration short={short} onChange={setShort} disabled={busy||written.current}/>
+      {choices.map((day,index)=><button key={day.day} disabled={busy||written.current}
+        className="day-choice-option secondary" aria-pressed={routineDay===day.day} onClick={()=>setRoutineDay(day.day)}><img src={exerciseImage(day.exercises[0])} width="40" height="40" loading="lazy" alt=""/><span>{routines[index].title}<small>{day.exercises.length} ejercicios{short?' · 20 min aprox.':''}</small></span>{routineDay===day.day&&<Check size={17} aria-hidden="true"/>}</button>)}
+      {strength&&!preview&&<div className="routine-lineup" aria-live="polite"><strong>Tu selección para este día</strong>
+        <ul>{strength.exercises.map(exercise=><li key={exercise.id}>{exercise.name} <small>· {exercise.sets} series</small></li>)}</ul>
+      </div>}
     </div>}
     {kind==='cardio'&&<CardioPicker activity={activity} minutes={minutes} disabled={busy||written.current}
       onActivity={setActivity} onMinutes={setMinutes}/>}
     {kind==='recovery'&&<p>El descanso quedará en tu plan. Tus días entrenados se cuentan por separado.</p>}
     {!online&&<p className="small-note" role="status">Conéctate para guardar tu elección.</p>}
     {ready&&(kind==='strength'||((!online||preview)&&kind==='cardio'))&&<button type="button" ref={previewButton} className="text-button choice-preview-toggle" aria-expanded={preview} aria-controls={preview?previewId:undefined} onClick={()=>setPreview(!preview)}>
-      {preview?'Ocultar vista previa':!online?'Consultar esta guía sin guardar':`Ver los ${strength?.exercises.length} ejercicios`}<ChevronRight size={16} aria-hidden="true"/>
+      {preview?'Ocultar vista previa':!online?'Consultar esta guía sin guardar':'Ver fotos y técnica'}<ChevronRight size={16} aria-hidden="true"/>
     </button>}
     {preview&&ready&&kind!=='recovery'&&<section id={previewId} className="day-choice-preview" aria-label="Guía temporal"
       onKeyDown={event=>{

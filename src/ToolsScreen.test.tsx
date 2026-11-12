@@ -9,11 +9,16 @@ import { ExerciseWeightProvider } from './ExerciseWeight'
 import { StorageProvider } from './lib/storage'
 import { resetRest, setRestPreset } from './lib/rest-clock'
 
+vi.mock('./lib/account',async importOriginal=>({
+  ...await importOriginal<typeof import('./lib/account')>(),
+  useAccount:()=>({session:{user:{id:'tools-test'}},complete:true,values:{},confirmedValues:{}}),
+}))
+
 function Tools() {
   const [tool, setTool] = useState('')
   const [setup,setSetup]=useState(initialBarSetup)
   const sharedSetup={setup,setSetup}
-  return <ExerciseWeightProvider value={<BarbellCalculator {...sharedSetup} showPlatesByTarget/>}><ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator {...sharedSetup}/>}/></ExerciseWeightProvider>
+  return <ExerciseWeightProvider value={{calculator:<BarbellCalculator {...sharedSetup} showPlatesByTarget/>}}><ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator {...sharedSetup}/>}/></ExerciseWeightProvider>
 }
 
 afterEach(() => { cleanup(); resetRest(); setRestPreset(90); vi.restoreAllMocks(); vi.useRealTimers() })

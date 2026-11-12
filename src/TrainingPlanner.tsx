@@ -14,10 +14,12 @@ import SortableExercise, { ExerciseRowContent } from './SortableExercise'
 import { catalogById, equipmentNames, exerciseById, exerciseImage, matchesExercise } from './lib/exercise-library'
 import { isoDate, parseDate } from './lib/dates'
 import { samePlan } from './lib/today-replacement'
+import { RoutineDuration } from './RoutineDuration'
+import { shortCustomPlan } from './lib/short-strength'
 
 const planChanged='La rutina guardada ha cambiado. Vuelve a abrirla para revisar los ejercicios.'
 
-export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirtyChange}:{date:string;initial:TrainingPlan;newRoutine?:{previous?:TrainingPlan;allowStart:boolean};onSaved:(start:boolean)=>void;onCancel:()=>void;onDirtyChange:(dirty:boolean)=>void}){
+export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirtyChange}:{date:string;initial:TrainingPlan;newRoutine?:{previous?:TrainingPlan;allowStart:boolean;short?:boolean};onSaved:(start:boolean)=>void;onCancel:()=>void;onDirtyChange:(dirty:boolean)=>void}){
   const account=useAccount(),wednesday=parseDate(date).getDay()===3
   const [plan,setPlan]=useState<TrainingPlan>(initial),[query,setQuery]=useState(''),[muscle,setMuscle]=useState('Todos'),[equipment,setEquipment]=useState('Todos'),[expanded,setExpanded]=useState<string|null>(null),[dragging,setDragging]=useState<string|null>(null),[libraryOpen,setLibraryOpen]=useState(Boolean(newRoutine)),[copyDate,setCopyDate]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false)
   const sensors=useSensors(useSensor(MouseSensor,{activationConstraint:{distance:6}}),useSensor(TouchSensor,{activationConstraint:{delay:240,tolerance:8}}),useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates}))
@@ -32,6 +34,8 @@ export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirt
   const close=()=>{if(!busy&&(!dirty||confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?')))onCancel()}
   const choices=workoutDays.filter(day=>(!wednesday||day.type!=='strength')&&(day.type!=='recovery'||day.day===6))
   const [startOnSave,setStartOnSave]=useState(false)
+  const [short,setShort]=useState(newRoutine?.short??false)
+  const shortVersion=newRoutine && short && plan.type==='strength' ? shortCustomPlan(plan) : null
   const [online,setOnline]=useState(()=>navigator.onLine)
   const saving=useRef(false)
   useEffect(()=>{
@@ -68,7 +72,7 @@ export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirt
     try{
       await account.flush()
       const key='training:'+date
-      const next={...plan,title:plan.title.trim()}
+      const next=shortVersion??{...plan,title:plan.title.trim()}
       if(!samePlan(writtenPlan.current,next)){
         account.set(key,(current:unknown)=>{
           const expected=writtenPlan.current??originalPlan.current
@@ -166,6 +170,13 @@ export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirt
       </div>
     </details>
     <footer className="plan-editor-footer">
+      {newRoutine && plan.type==='strength' && !strengthEmpty && <>
+        <RoutineDuration short={short} onChange={setShort} disabled={busy}/>
+        {shortVersion&&<div className="routine-lineup" aria-live="polite"><strong>Para este día · unos 20 min</strong>
+          <ul>{shortVersion.exercises.map(item=><li key={item.exerciseId}>{exerciseById.get(item.exerciseId)?.name} <small>· {item.sets} {item.sets===1?'serie':'series'}</small></li>)}</ul>
+          <p className="small-note">Se usan tus dos primeros ejercicios, con hasta dos series de cada uno y sus descansos habituales.</p>
+        </div>}
+      </>}
       {message&&<p ref={messageRef} className="planner-message" role="status" tabIndex={-1}>{message}</p>}
       {!online&&<p role="status">Conéctate a internet para guardar tus cambios.</p>}
       {online&&!account.loading&&!account.complete&&<button className="text-button" onClick={()=>account.refresh().catch(()=>setMessage('No se pudieron cargar tus datos. Vuelve a intentarlo.'))}>Cargar mis datos para guardar</button>}

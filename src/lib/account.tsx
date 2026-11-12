@@ -5,7 +5,8 @@ import { attendanceEntryValid } from './attendance'
 import { trainingEntryValid } from './training-plan'
 import { samePlan } from './today-replacement'
 import { readAccountPages } from './account-pages'
-import { defaultSettings } from './db'
+import { defaultSettings, validateBackup } from './db'
+import { fitnessPreferenceValid, samePreference } from './fitness-preferences'
 import type { Backup, ProgressLog } from '../types'
 import { backupJson, download } from './files'
 
@@ -23,6 +24,7 @@ export const supabase=createClient(config.url,config.publishableKey,{
 })
 type Account={
   session:Session|null;loading:boolean;saving:boolean;error:string;values:Record<string,unknown>
+  confirmedValues:Record<string,unknown>
   set:(key:string,next:unknown|((previous:unknown)=>unknown))=>void
   flush:()=>Promise<void>;refresh:()=>Promise<void>;remove:(key:string)=>Promise<void>
   complete:boolean;getBackup:()=>Promise<Backup>
@@ -36,9 +38,10 @@ export function AccountProvider({children}:{children:ReactNode}){
   const [session,setSession]=useState<Session|null>(null)
   const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState('')
   const [values,setValues]=useState<Record<string,unknown>>({})
+  const [confirmedValues,setConfirmedValues]=useState<Record<string,unknown>>({})
   const current=useRef(values),versions=useRef(new Map<string,{version:number;updated_at:string}>()),pending=useRef(new Map<string,unknown>())
   const running=useRef<Promise<void>|null>(null),owner=useRef<string|null>(null)
-  const unconfirmedPlan = useRef<PlanWrite|null>(null)
+  const unconfirmedWrite = useRef<PlanWrite|null>(null)
   const generation=useRef(0),loadNumber=useRef(0)
   const [complete,setComplete]=useState(false)
   const completeRef=useRef(false)
@@ -60,7 +63,7 @@ export function AccountProvider({children}:{children:ReactNode}){
       if(!isCurrent())return
       const next=Object.fromEntries(rows.map(row=>[row.key,row.value.data]))
       versions.current=new Map(rows.map(row=>[row.key,{version:row.version,updated_at:row.updated_at}]))
-      current.current=next;setValues(next);updateComplete(true);setLoading(false);setError('')
+      current.current=next;setValues(next);setConfirmedValues(next);updateComplete(true);setLoading(false);setError('')
       return next
     }catch(error){
       if(!isCurrent())return
@@ -74,7 +77,8 @@ export function AccountProvider({children}:{children:ReactNode}){
     try{localStorage.removeItem('plan-police-auth')}catch{}
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(owner.current!==(next?.user.id??null)){
-        unconfirmedPlan.current=null
+        unconfirmedWrite.current=null
+        setConfirmedValues({})
         owner.current=next?.user.id??null;generation.current++;updateComplete(false);pending.current.clear();versions.current.clear();current.current={};setValues({});setLoading(!!next);setError('')
       }
       setSession(next);if(!next)setLoading(false)
@@ -92,34 +96,36 @@ export function AccountProvider({children}:{children:ReactNode}){
       while(pending.current.size&&owner.current===user){
         const [key,latestValue]=pending.current.entries().next().value as [string,unknown]
         const revision=versions.current.get(key),version=revision?.version
-        // Finish the exact interrupted write before sending any newer edit for this date.
-        const previous=unconfirmedPlan.current
-        const retryingPlan=previous?.user_id===user && previous.key===key
-        const row=retryingPlan ? previous : {
+        // Confirm an interrupted write before sending a newer edit to the same record.
+        const previous=unconfirmedWrite.current
+        const retrying=previous?.user_id===user && previous.key===key
+        const row=retrying ? previous : {
           user_id:user,key,value:{data:latestValue},
           version:(version??0)+1,updated_at:new Date().toISOString()
         }
         const value=row.value.data
         const isPlan=trainingEntryValid(key,value)
-        if(isPlan)unconfirmedPlan.current=row
+        const isPreference=fitnessPreferenceValid(key,value)
+        const tracked=isPlan || isPreference || key.startsWith('progress:') || key==='progressDraft'
+        if(tracked)unconfirmedWrite.current=row
         const result=version===undefined?await supabase.from('plan_data').insert(row).select('version,updated_at'):await supabase.from('plan_data').update(row).eq('user_id',user).eq('key',key).eq('version',version).eq('updated_at',revision!.updated_at).select('version,updated_at')
-        if(owner.current!==user || (isPlan && unconfirmedPlan.current!==row))return
+        if(owner.current!==user || (tracked && unconfirmedWrite.current!==row))return
         let confirmed=result.data?.length===1 ? result.data[0] : null
         const duplicateInsert=version===undefined && result.error?.code==='23505'
         const missedUpdate=version!==undefined && !result.error && result.data?.length===0
-        const checkPlan=retryingPlan && isPlan && (duplicateInsert || missedUpdate)
+        const checkWrite=retrying && tracked && (duplicateInsert || missedUpdate)
         const checkAttendance=duplicateInsert && attendanceEntryValid(key,value)
-        if(checkPlan || checkAttendance){
+        if(checkWrite || checkAttendance){
           const stored=await supabase.from('plan_data').select('version,updated_at,value').eq('user_id',user).eq('key',key).maybeSingle()
-          if(owner.current!==user || (isPlan && unconfirmedPlan.current!==row))return
+          if(owner.current!==user || (tracked && unconfirmedWrite.current!==row))return
           if(stored.error)throw new Error('No se pudo comprobar el registro. Reintenta al recuperar la conexión.')
           const record=stored.data?.value?.data
-          const matchesPlan=checkPlan && stored.data?.version===row.version &&
+          const matchesWrite=checkWrite && stored.data?.version===row.version &&
             Date.parse(stored.data.updated_at)===Date.parse(row.updated_at) &&
-            trainingEntryValid(key,record) && samePlan(record,value)
+            (isPlan ? trainingEntryValid(key,record) && samePlan(record,value) : samePreference(record,value))
           const matchesAttendance=checkAttendance && attendanceEntryValid(key,record) &&
             record.completedAt===value.completedAt && record.title===value.title && record.type===value.type
-          if(!matchesPlan && !matchesAttendance)throw new Error(conflict)
+          if(!matchesWrite && !matchesAttendance)throw new Error(conflict)
           confirmed=stored.data
         }else if(result.error){
           if(result.error.code==='23505')throw new Error(conflict)
@@ -127,8 +133,9 @@ export function AccountProvider({children}:{children:ReactNode}){
         }
         if(!confirmed)throw new Error(conflict)
         if(owner.current!==user)return
-        if(isPlan)unconfirmedPlan.current=null
+        if(tracked)unconfirmedWrite.current=null
         versions.current.set(key,{version:confirmed.version,updated_at:confirmed.updated_at})
+        setConfirmedValues(records=>({...records,[key]:value}))
         if(pending.current.get(key)===value)pending.current.delete(key)
       }
       setError('')
@@ -136,7 +143,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     running.current=task;return task
   }
   const set=(key:string,next:unknown|((previous:unknown)=>unknown))=>{
-    if(!owner.current)return
+    if(!owner.current || session?.user.id!==owner.current)throw new Error('La sesión ha cambiado.')
     generation.current++
     const value=typeof next==='function'?next(current.current[key]):next
     current.current={...current.current,[key]:value};setValues(current.current);pending.current.set(key,value)
@@ -152,11 +159,16 @@ export function AccountProvider({children}:{children:ReactNode}){
     return()=>{clearInterval(interval);window.removeEventListener('focus',sync);window.removeEventListener('online',online);window.removeEventListener('beforeunload',guard)}
   },[])
   const remove=async(key:string)=>{
-    await flush();const user=owner.current;if(!user)throw new Error('Inicia sesión')
+    const user=session?.user.id
+    if(!user||owner.current!==user)throw new Error('La sesión ha cambiado.')
+    await flush()
+    if(owner.current!==user)throw new Error('La sesión ha cambiado.')
     const revision=versions.current.get(key)
     const result=await supabase.from('plan_data').delete().eq('user_id',user).eq('key',key).eq('version',revision?.version??0).eq('updated_at',revision?.updated_at??'1970-01-01T00:00:00Z').select('key')
+    if(owner.current!==user)throw new Error('La sesión ha cambiado.')
     if(result.error||result.data.length!==1)throw new Error(conflict)
     generation.current++;versions.current.delete(key);const next={...current.current};delete next[key];current.current=next;setValues(next)
+    setConfirmedValues(records=>{const kept={...records};delete kept[key];return kept})
   }
   const getBackup=async()=>{
     const user=owner.current
@@ -168,6 +180,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     return accountBackup(snapshot)
   }
   const restore=async(data:Backup,beforeReplace:(current:Backup)=>void)=>{
+    if(!validateBackup(data))throw new Error('La copia no es válida.')
     const user=owner.current
     const backup=await getBackup()
     if(!user||owner.current!==user)throw new Error('La sesión ha cambiado.')
@@ -178,7 +191,7 @@ export function AccountProvider({children}:{children:ReactNode}){
     try{
     const entries:Array<{key:string;value:{data:unknown}}>=data.progressLogs.map(({photo:_photo,...log})=>({key:`progress:${log.id}`,value:{data:log}}))
     for(const key of ['calculator','personalGoal','goalDraft','progressDraft'])if(data.localState?.[key]!==undefined)entries.push({key,value:{data:key==='progressDraft'?{...data.localState[key] as object,photo:''}:data.localState[key]}})
-    for(const [key,value] of Object.entries(data.localState??{}))if(key.startsWith('training:')||key.startsWith('attendance:'))entries.push({key,value:{data:value}})
+    for(const [key,value] of Object.entries(data.localState??{}))if(key.startsWith('training:')||key.startsWith('attendance:')||fitnessPreferenceValid(key,value))entries.push({key,value:{data:value}})
     const result=await supabase.rpc('replace_plan_data',{entries})
     if(result.error)throw result.error
     if(owner.current!==user)return
@@ -186,8 +199,8 @@ export function AccountProvider({children}:{children:ReactNode}){
     }finally{setLoading(false)}
   }
   const logout=async()=>{await flush();const {error}=await supabase.auth.signOut({scope:'local'});if(error)throw error}
-  const discardAndReload=async()=>{if(pending.current.size&&!confirm('¿Descartar los cambios que todavía no están sincronizados y cargar la versión de tu cuenta? Exporta antes si quieres conservarlos.'))return;unconfirmedPlan.current=null;pending.current.clear();await load()}
-  return <Context.Provider value={{session,loading,saving,error,values,complete,getBackup,set,flush,refresh,remove,restore,logout,discardAndReload}}>{children}</Context.Provider>
+  const discardAndReload=async()=>{if(pending.current.size&&!confirm('¿Descartar los cambios que todavía no están sincronizados y cargar la versión de tu cuenta? Exporta antes si quieres conservarlos.'))return;unconfirmedWrite.current=null;pending.current.clear();await load()}
+  return <Context.Provider value={{session,loading,saving,error,values,confirmedValues,complete,getBackup,set,flush,refresh,remove,restore,logout,discardAndReload}}>{children}</Context.Provider>
 }
 
 export function useAccount(){const account=useContext(Context);if(!account)throw new Error('Falta AccountProvider');return account}

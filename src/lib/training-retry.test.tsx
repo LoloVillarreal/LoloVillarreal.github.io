@@ -80,6 +80,32 @@ it('respeta un cambio de otro dispositivo entre la respuesta perdida y el reinte
   expect(db.commits).toBe(1)
 })
 
+it('un ajuste pendiente solo pasa a confirmado tras corroborar la respuesta perdida',async()=>{
+  const {result}=renderHook(()=>useAccount(),{wrapper:AccountProvider})
+  await waitFor(()=>expect(result.current.complete).toBe(true))
+  const note='machineNote:D57C2EC7'
+  act(()=>result.current.set(note,'Banco 2'))
+  await waitFor(()=>expect(result.current.error).toMatch(/sincronizar/))
+  expect(result.current.values[note]).toBe('Banco 2')
+  expect(result.current.confirmedValues[note]).toBeUndefined()
+  await act(()=>result.current.flush())
+  expect(result.current.confirmedValues[note]).toBe('Banco 2')
+  expect(db.commits).toBe(1)
+})
+
+it('recupera una marca confirmada en el servidor sin repetirla tras perder la respuesta',async()=>{
+  const {result}=renderHook(()=>useAccount(),{wrapper:AccountProvider})
+  await waitFor(()=>expect(result.current.complete).toBe(true))
+  const key='progress:qa', mark={id:'qa',date:'2026-11-12',hipThrustKg:50,hipThrustReps:8,weight:undefined,notes:''}
+  act(()=>result.current.set(key,mark))
+  await waitFor(()=>expect(result.current.error).toMatch(/sincronizar/))
+  expect(result.current.confirmedValues[key]).toBeUndefined()
+  db.row=JSON.parse(JSON.stringify(db.row))
+  await act(()=>result.current.flush())
+  expect(result.current.confirmedValues[key]).toMatchObject({hipThrustKg:50,hipThrustReps:8})
+  expect(db.commits).toBe(1)
+})
+
 it('confirma primero la escritura interrumpida y luego aplica la siguiente edición local',async () => {
   const result=await loseSaveResponse()
   const newer={...plan,notes:'Segunda elección'}

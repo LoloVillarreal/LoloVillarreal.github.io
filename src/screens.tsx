@@ -1,6 +1,8 @@
+import { MachineSettings } from './MachineSettings'
 import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
 import { ExerciseWeightButton } from './ExerciseWeight'
+import { ExerciseMovement } from './ExerciseMovement'
 import BarbellDrawing from './BarbellDrawing'
 import { exerciseUnit } from './lib/exercise-library'
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
@@ -380,6 +382,7 @@ function SessionView({day,date,index,cardio,notes,preview,onStep,onExit,notify,o
     {exercise?<div className="card training-session-card">
       {count>1&&<div className="session-position-track" aria-hidden="true"><i style={{transform:`scaleX(${(step+1)/count})`}}/></div>}
       <ExerciseGuide exercise={exercise}/>
+      <MachineSettings exerciseId={exercise.hevyId}/>
       {!preview&&<TodayReplacement date={date} exercise={exercise} index={step}/>}
       {!preview&&exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
         <summary>Medir el descanso</summary>
@@ -410,8 +413,9 @@ function ExerciseGuide({exercise}:{exercise:Exercise}) {
     <div className="training-session-dose">
       <strong>Haz {exercise.sets} {exercise.sets===1?'serie':'series'} de {amount} {unit}{exercise.perSide?' por lado':''}.</strong>
       {exercise.rest[1]>0&&<span>Descansa {rest} segundos entre series.</span>}
-      <ExerciseWeightButton exerciseName={exercise.name}/>
+      <ExerciseWeightButton exerciseName={exercise.name} hevyId={exercise.hevyId}/>
     </div>
+    <ExerciseMovement exercise={exercise}/>
     <details key={exercise.id} className="session-details">
       <summary>Cómo hacerlo</summary>
       <p>{techniqueFor(exercise).text}</p>
