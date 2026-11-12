@@ -32,6 +32,7 @@
 .training-session-dose span{font-size:.88rem;color:var(--muted);line-height:1.45}
 .training-session .session-details{border-bottom:1px solid var(--line);margin:0;padding:0}
 .training-session .session-details summary{display:list-item;align-content:center;min-height:46px;cursor:pointer}
+.training-session .session-note-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 12px}
 .training-session .today-replacement{padding:0;border-bottom:1px solid var(--line)}
 .training-session .today-replacement:empty{display:none}
 .training-session .today-replacement>.secondary{border:0;box-shadow:none;background:none;color:var(--text);margin:0;min-height:46px;padding:4px 0;text-align:left}

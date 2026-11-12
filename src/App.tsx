@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useState } from 'react'
 import { useGuidePosition } from './lib/guide-position'
+import { selectRestSession } from './lib/rest-clock'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Check, Dumbbell, Home, Moon, RefreshCw, Wrench, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
 import { getAll, defaultSettings } from './lib/db'
@@ -27,6 +28,9 @@ function Workspace(){
   useEffect(()=>{const change=()=>setRoute(location.hash);window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[])
   const storage=useStorage()
   const account=useAccount()
+  useLayoutEffect(()=>{
+    if(account.session || !account.loading)selectRestSession(account.session?.user ?? null)
+  },[account.session,account.loading])
   const [barSetup,setBarSetup]=useState(initialBarSetup)
   useEffect(()=>{setBarSetup(initialBarSetup())},[account.session?.user.id])
   const [navigation,setNavigation]=useState(()=>({day:isoDate(),section:'home' as NavSection,tool:'',trainingDate:isoDate(),nutritionDate:isoDate(),tab:'settings' as 'calc'|'tips'|'settings'}))

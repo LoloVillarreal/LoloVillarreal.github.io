@@ -30,10 +30,12 @@ body:has(dialog[open]) #fitness-scroll { overflow:hidden; }
   flex:none;
   margin:0 0 max(4px, env(safe-area-inset-bottom, 0px));
   display: grid;
-  grid-template-columns: repeat(5, minmax(0,1fr));
+  /* Both halves use 2fr, keeping Home centred while the long tools label has room. */
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(44px,.8fr) minmax(0,1.3fr) minmax(44px,.7fr);
   width: min(450px, calc(100% - 20px));
   max-width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px);
-  height: 64px;
+  height: auto;
+  min-height: 64px;
   padding: 3px 5px;
   gap: 0;
   border: 0;
@@ -86,7 +88,7 @@ body:has(dialog[open]) #fitness-scroll { overflow:hidden; }
   background: none;
   color: var(--bar-text);
   box-shadow: none;
-  font-size: clamp(9px,2.45vw,11px);
+  font-size: clamp(.75rem,3.2vw,.8125rem);
   line-height: 1.15;
   font-weight: 550;
 }
@@ -97,7 +99,15 @@ body:has(dialog[open]) #fitness-scroll { overflow:hidden; }
 .main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #ffffff23; }
 .glass .main-dock [aria-current="page"]:not(.dock-home) .dock-glyph { background: #dbe6fb; }
 .fitness-viewport > .main-dock svg { width: 20px; height: 20px; stroke-width: 1.8; }
-.main-dock .dock-label { white-space: nowrap; }
+.main-dock .dock-label { max-width:100%; white-space:normal; overflow-wrap:anywhere; text-align:center; letter-spacing:-.012em; }
+@media (max-width: 359px) {
+  .fitness-viewport > .bottom-nav.main-dock {
+    width:calc(100% - 6px);
+    max-width:calc(100% - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 6px);
+    padding-inline:2px;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) 44px minmax(0,1.3fr) minmax(44px,.7fr);
+  }
+}
 .fitness-viewport > .main-dock .dock-home { justify-content: flex-end; padding-bottom: 8px; }
 .main-dock .dock-home .dock-glyph {
   position: absolute;

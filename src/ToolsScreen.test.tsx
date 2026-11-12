@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
 import { StorageProvider } from './lib/storage'
+import { resetRest, setRestPreset } from './lib/rest-clock'
 
 function Tools() {
   const [tool, setTool] = useState('')
@@ -13,20 +14,25 @@ function Tools() {
   return <ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator setup={setup} setSetup={setSetup}/>}/>
 }
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => { cleanup(); resetRest(); setRestPreset(90); vi.restoreAllMocks(); vi.useRealTimers() })
 
-it('inicia el descanso desde el índice y estrena el tiempo elegido cuando se vuelve a abrir', () => {
+it('conserva el descanso al cambiar el siguiente intervalo y salir a otra pantalla', () => {
   vi.useFakeTimers()
-  render(<Tools/>)
+  const first=render(<Tools/>)
   fireEvent.click(screen.getByRole('button',{name:/Descansos.*Iniciar descanso/}))
   act(()=>vi.advanceTimersByTime(10000))
   expect(screen.getByRole('timer').textContent).toBe('1:20')
   fireEvent.click(screen.getByRole('button',{name:'45 s'}))
-  expect(screen.getByRole('button',{name:'Empezar descanso'})).toBeTruthy()
+  expect(screen.getByRole('timer').textContent).toBe('1:20')
   fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
-  fireEvent.click(screen.getByRole('button',{name:/0:45.*Descansos/}))
-  act(()=>vi.advanceTimersByTime(1000))
-  expect(screen.getByRole('timer').textContent).toBe('0:44')
+  first.unmount()
+  act(()=>vi.advanceTimersByTime(15000))
+  render(<Tools/>)
+  fireEvent.click(screen.getByRole('button',{name:/Descansos.*Ver descanso/}))
+  expect(screen.getByRole('timer').textContent).toBe('1:05')
+  act(()=>vi.advanceTimersByTime(65000))
+  fireEvent.click(screen.getByRole('button',{name:'Repetir descanso'}))
+  expect(screen.getByRole('timer').textContent).toBe('0:45')
 })
 
 it('mantiene las ideas de comida como guía opcional y vuelve al tipo de comida elegido', async () => {

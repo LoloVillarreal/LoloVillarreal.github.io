@@ -54,11 +54,20 @@ export const twelveWeekPlan = [
   { weeks:'12', name:'Revisión', guidance:'Consolida marcas, revisa molestias y compara tendencia, no un único día.' },
 ]
 
-export const hevyExport = () => ({
-  schema: 'glute-core/hevy-compatible-v1',
-  warning: 'Archivo de compatibilidad manual. No implica sincronización ni uso de una API de Hevy.',
-  workouts: workoutDays.filter(d => d.type === 'strength').map(day => ({
+export const hevyExport = (days: readonly WorkoutDay[] = workoutDays) => ({
+  schema: 'glute-core/hevy-compatible-v2',
+  warning: 'Guía de uso manual. Cada rango se expresa en repeticiones, segundos o metros. No hay sincronización con Hevy.',
+  workouts: days.filter(d => d.type === 'strength').map(day => ({
     title: `${day.label} — ${day.title}`,
-    exercises: day.exercises.map(e => ({ template_id: e.hevyId, exercise_name: e.hevyName, sets: e.sets, rep_range: e.reps, rest_seconds: e.rest[1], rir: e.rir[1] }))
+    exercises: day.exercises.map(exercise => ({
+      template_id: exercise.hevyId,
+      exercise_name: exercise.hevyName,
+      sets: exercise.sets,
+      ...(exercise.unit === 'seconds' ? { duration_range_seconds: exercise.reps }
+        : exercise.unit === 'meters' ? { distance_range_meters: exercise.reps }
+        : { rep_range: exercise.reps }),
+      rest_seconds: exercise.rest[1],
+      rir: exercise.rir[1],
+    }))
   }))
 })

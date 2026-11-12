@@ -40,7 +40,8 @@ function Empty({text}:{text:string}){return <p className="empty">{text}</p>}
 function SavedDayChoice({date,plan,onChoose,onStart,onDetails,edit=false}:{
   date:string;plan:TrainingPlan;onChoose:(kind:TrainingPlan['type'])=>void;onStart:()=>void;onDetails:()=>void;edit?:boolean
 }){
-  const action=plan.type==='recovery'?'Ver descanso':plan.type==='cardio'?'Empezar cardio':'Empezar entrenamiento'
+  const future=date>isoDate()
+  const action=future?'Consultar guía':plan.type==='recovery'?'Ver descanso':plan.type==='cardio'?'Empezar cardio':'Empezar entrenamiento'
   return <section className={'card day-choice day-choice-index saved-day-choice'+(edit?' training-overview':'')} tabIndex={-1}>
     <p className="day-date">{dateLabel(date)}</p>
     <h2>{date===isoDate()?'¿Qué quieres hacer hoy?':'¿Qué quieres hacer este día?'}</h2>
@@ -48,7 +49,7 @@ function SavedDayChoice({date,plan,onChoose,onStart,onDetails,edit=false}:{
     <div className="saved-day-shortcut">
       <button type="button" className="saved-plan-link" onClick={onDetails} aria-label={(edit?'Editar detalles: ':'Ver el plan de hoy: ')+plan.title}><span><small>Tu plan guardado</small><strong>{plan.title}</strong></span><ChevronRight size={16} aria-hidden="true"/></button>
       <button className="secondary" disabled={plan.type==='strength'&&!plan.exercises.length} aria-label={action} onClick={onStart}>
-        <Play size={15} aria-hidden="true"/>{plan.type==='recovery'?'Ver guía':'Empezar'}
+        {future?<ChevronRight size={15} aria-hidden="true"/>:<Play size={15} aria-hidden="true"/>}{future?'Consultar guía':plan.type==='recovery'?'Ver guía':'Empezar'}
       </button>
     </div>
   </section>
@@ -126,7 +127,7 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
         <button className="text-button" onClick={() => go('training',today)}>Ver el plan de hoy<ChevronRight size={16}/></button>
       </div>
     </section> }
-    {reader && reader.date !== today && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
+    {reader && reader.date < today && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
       Continuar la sesión del {shortDate(reader.date)}<ChevronRight size={16}/>
     </button>}
     </div>
@@ -201,6 +202,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   const account=useAccount(),[editing,setEditing]=useState(false),[removing,setRemoving]=useState(false),[deletedPlan,setDeletedPlan]=useState<TrainingPlan|null>(null)
   useEffect(()=>setDeletedPlan(null),[date,account.session?.user.id])
   const [recentRegistration,setRecentRegistration]=useState<string|null>(null)
+  const [preview,setPreview]=useState<GuidePosition|null>(null)
   const [pickingDate,setPickingDate]=useState('')
   const choiceTrigger=useRef<HTMLButtonElement>(null)
   const initialKind=useRef<TrainingPlan['type']>()
@@ -211,18 +213,22 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   },[onDirtyChange])
   const saved=account.values[`training:${date}`],hasPlan=trainingEntryValid(`training:${date}`,saved)
   const selected=workoutForDate(date,hasPlan?saved:undefined)
-  useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[editing,reader?.date,reader?.index])
+  const recorded = attendanceEntryValid('attendance:'+date,account.values['attendance:'+date])
+  const consult = date>isoDate() || recorded
+  const openGuide=(index=0)=>consult?setPreview({date,index}):setReader({date,index})
+  useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[editing,reader?.date,reader?.index,preview?.date,preview?.index])
   function closeGuide(destination:'summary'|'registration') {
-    setReader(null)
+    if(preview?.date===date)setPreview(null)
+    else setReader(null)
     requestAnimationFrame(()=>{
-      const selector=destination==='summary'?'.training-overview, .attendance-control--done':'.attendance-control'
+      const selector=destination==='summary'?(consult?'.recorded-plan-options button, .saved-day-shortcut > .secondary':'.training-overview, .attendance-control--done'):'.attendance-control'
       const target=document.querySelector<HTMLElement>(selector)
       target?.focus({preventScroll:true})
       target?.scrollIntoView({block:'center'})
     })
   }
   if(account.session&&account.loading)return <><TrainingCalendar date={date} onChange={setDate}/><section className="card" role="status"><p>Recuperando tu entrenamiento…</p></section></>
-  if(editing&&hasPlan)return <>{!account.session&&<button className="text-button" onClick={()=>setEditing(false)}>Volver al resumen</button>}<AccountGate><TrainingPlanner key={`${account.session?.user.id}:${date}`} date={date} initial={saved} onDirtyChange={onDirtyChange} onCancel={()=>setEditing(false)} onSaved={start=>{setEditing(false);if(start)setReader({date,index:0});notify('Entrenamiento guardado en tu cuenta.')}}/></AccountGate></>
+  if(editing&&hasPlan)return <>{!account.session&&<button className="text-button" onClick={()=>setEditing(false)}>Volver al resumen</button>}<AccountGate><TrainingPlanner key={`${account.session?.user.id}:${date}`} date={date} initial={saved} onDirtyChange={onDirtyChange} onCancel={()=>setEditing(false)} onSaved={start=>{setEditing(false);if(start)openGuide();notify('Entrenamiento guardado en tu cuenta.')}}/></AccountGate></>
   const resume = bookmark?.date === date ? Math.min(bookmark.index, Math.max(0, selected.exercises.length-1)) : 0
   function confirmedRegistration() {
     setRecentRegistration(date)
@@ -239,19 +245,20 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       setPickingDate('');onDirtyChange(false);setDate(value)
     }}/>
   const management=<section className="card plan-management"><p className="small-note">La planificación y los días entrenados se guardan por separado.</p>{hasPlan&&<button className="text-button" disabled={removing||account.saving||!navigator.onLine} onClick={async()=>{if(!confirm('¿Borrar la planificación de este día? Su marca de entrenado y tus medidas se conservarán.'))return;setRemoving(true);const previous=saved;try{await account.remove(`training:${date}`);setDeletedPlan(previous);notify('Planificación eliminada. Puedes deshacerlo.')}catch{notify('No se pudo borrar. Comprueba la conexión y reintenta.')}finally{setRemoving(false)}}}>Borrar planificación del día</button>}{deletedPlan&&<div className="undo-strip"><span>Planificación eliminada</span><button className="secondary" disabled={removing||account.saving||hasPlan||!navigator.onLine} onClick={async()=>{setRemoving(true);try{account.set(`training:${date}`,deletedPlan);await account.flush();setDeletedPlan(null);notify('Planificación recuperada.')}catch{notify('No se pudo recuperar. Reintenta con conexión.')}finally{setRemoving(false)}}}>Deshacer</button></div>}</section>
-  const recorded = attendanceEntryValid('attendance:'+date,account.values['attendance:'+date])
   const attendanceControl=<div key={'record:'+date} className="simple-day-register">
     <AttendanceControl key={date} date={date} day={selected} notify={notify} existingOnly={!hasPlan || pickingDate===date} onRegistered={confirmedRegistration} recent={recentRegistration===date}/>
   </div>
-  if(hasPlan && !editing && pickingDate!==date && reader?.date===date)return <SessionView day={selected} date={date} index={reader.index}
-    cardio={saved.cardio} onStep={index=>setReader({date,index})}
+  const viewingPreview=preview?.date===date && consult
+  const guide=viewingPreview?preview:date<=isoDate()?reader:null
+  if(hasPlan && !editing && pickingDate!==date && guide?.date===date)return <SessionView day={selected} date={date} index={guide.index}
+    cardio={saved.cardio} notes={saved.notes} preview={viewingPreview} onStep={index=>viewingPreview?setPreview({date,index}):setReader({date,index})}
     onExit={()=>closeGuide('summary')} notify={notify} onRegistered={confirmedRegistration}/>
   if(recorded && pickingDate!==date)return <>
     {calendar}
     {attendanceControl}
     <section className="card recorded-plan-options">
       <h2>Plan de este día</h2>
-      {hasPlan && <button className="secondary full" onClick={()=>setReader({date,index:0})}>Ver la guía de {selected.title}</button>}
+      {hasPlan && <button className="secondary full" onClick={()=>openGuide()}>Ver la guía de {selected.title}</button>}
       <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(date)}}>{hasPlan?'Cambiar mi elección':'Añadir un plan a este día'}</button>
       {hasPlan && <button className="text-button" onClick={()=>setEditing(true)}>Editar detalles</button>}
     </section>
@@ -270,8 +277,8 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
   </>
   return <>
     {calendar}
-    {bookmark?.date!==date ? <SavedDayChoice date={date} plan={saved} edit onChoose={kind=>{initialKind.current=kind;setPickingDate(date)}}
-      onStart={()=>setReader({date,index:0})} onDetails={()=>setEditing(true)}/>
+    {consult || bookmark?.date!==date ? <SavedDayChoice date={date} plan={saved} edit onChoose={kind=>{initialKind.current=kind;setPickingDate(date)}}
+      onStart={()=>openGuide()} onDetails={()=>setEditing(true)}/>
     : <section tabIndex={-1} className="card training-overview simple-day-intro">
       <p className="day-date">{dateLabel(date)}</p>
       <h2>{selected.title}</h2>
@@ -290,7 +297,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       {selected.exercises.length===0&&<p className="empty">Edita el plan de este día para añadir un ejercicio.</p>}
       {selected.exercises.map((exercise,index)=><div key={exercise.id} className="routine-preview-row">
         <ExercisePhoto exercise={exercise}/>
-        <button className="routine-preview-open" onClick={()=>setReader({date,index})}><span><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exerciseUnit(exercise)}</small></span><ChevronRight size={18}/></button>
+        <button className="routine-preview-open" onClick={()=>openGuide(index)}><span><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exerciseUnit(exercise)}</small></span><ChevronRight size={18}/></button>
       </div>)}
       <details><summary>Antes de empezar</summary><p>Dedica unos minutos a moverte y realiza series de aproximación antes de las cargas de trabajo.</p><p className="small-note">RIR indica cuántas repeticiones más crees que podrías hacer con buena técnica.</p></details>
     </section> : null}
@@ -304,7 +311,7 @@ function NonStrengthGuide({day,cardio}:{day:WorkoutDay;cardio?:{activity:string;
   return day.type==='cardio'?<section className="card cardio-guide"><span className="illustrated-symbol">🚶‍♀️</span><h2>Muévete a un ritmo cómodo</h2><p>{cardio?`Tu selección: ${cardio.minutes} minutos de ${cardioLabel(cardio.activity).toLocaleLowerCase('es')}, ajustados a tus sensaciones.`:'Referencia de la sesión: 25–45 minutos de caminata, bicicleta o elíptica, adaptados a tu recuperación.'}</p><ul><li>Empieza suave y aumenta gradualmente.</li><li>Un ritmo moderado permite hablar sin quedarte sin aire.</li><li>Termina bajando el ritmo.</li></ul><div className="goal-callout"><strong>Objetivo de hoy</strong><p>Actividad cardiovascular y recuperación.{day.day===3?' El miércoles es exclusivamente de cardio':''}</p></div></section>:<section className="card cardio-guide"><span className="illustrated-symbol">🌿</span><h2>Recuperar también es avanzar</h2><p>Descansar, caminar si te apetece o hacer movilidad suave. Sin fuerza programada ni un objetivo rígido de pasos.</p></section>
 }
 
-function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{day:WorkoutDay;date:string;index:number;cardio?:{activity:string;minutes:number};onStep:(index:number)=>void;onExit:()=>void;notify:Notify;onRegistered:()=>void}) {
+function SessionView({day,date,index,cardio,notes,preview,onStep,onExit,notify,onRegistered}:{day:WorkoutDay;date:string;index:number;cardio?:{activity:string;minutes:number};notes:string;preview:boolean;onStep:(index:number)=>void;onExit:()=>void;notify:Notify;onRegistered:()=>void}) {
   const count=day.exercises.length
   const step=Math.max(0,Math.min(index,count-1))
   const exercise=day.exercises[step]
@@ -351,11 +358,13 @@ function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{
         </button></li>)}
       </ol>}
     </nav>
+    {preview&&<p className="day-date">Guía de consulta · {dateLabel(date)}</p>}
+    {notes.trim()&&<details className="session-details"><summary>Notas de la sesión</summary><p className="session-note-text">{notes}</p></details>}
     {exercise?<div className="card training-session-card">
       {count>1&&<div className="session-position-track" aria-hidden="true"><i style={{transform:`scaleX(${(step+1)/count})`}}/></div>}
       <ExerciseGuide exercise={exercise}/>
-      <TodayReplacement date={date} exercise={exercise} index={step}/>
-      {exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
+      {!preview&&<TodayReplacement date={date} exercise={exercise} index={step}/>}
+      {!preview&&exercise.rest[1]>0&&<details key={date+':'+step+':'+exercise.id} className="session-details">
         <summary>Medir el descanso</summary>
         <RestTimer seconds={exercise.rest[1]}/>
       </details>}
@@ -363,11 +372,11 @@ function SessionView({day,date,index,cardio,onStep,onExit,notify,onRegistered}:{
         <button className="primary full training-session-next" onClick={event=>move(1,event)}>
           <span><small>Siguiente ejercicio</small><strong>{day.exercises[step+1].name}</strong></span><ChevronRight size={19} aria-hidden="true"/>
         </button>:
-        <AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
+        preview?<button className="secondary full" onClick={onExit}>Cerrar consulta</button>:<AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
       {step>0&&<button className="text-button training-session-previous" onClick={event=>move(-1,event)}><ArrowLeft size={16}/>Ejercicio anterior</button>}
     </div>:<>
       <NonStrengthGuide day={day} cardio={cardio}/>
-      <AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>
+      {preview?<button className="secondary full" onClick={onExit}>Cerrar consulta</button>:<AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
     </>}
   </section>
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ArrowLeft, ArrowUpRight, BookOpen, Calculator, ChevronRight, Dumbbell, Library, Play, Scale, Timer, Utensils } from 'lucide-react'
 import { Calculators, NutritionScreen } from './screens'
 import { RestTimer } from './RestTimer'
+import { setRestPreset, startRest, useRestClock, useRestPreset } from './lib/rest-clock'
 import BarbellDrawing from './BarbellDrawing'
 import { ExerciseDetails } from './ExercisePhoto'
 import { exerciseImage, exerciseLibrary, matchesExercise } from './lib/exercise-library'
@@ -21,9 +22,22 @@ const tools = {
 }
 type ToolId = keyof typeof tools
 
+function RestLauncher({onOpen}:{onOpen:()=>void}){
+ const {preset,remaining,running,paused,finished}=useRestClock()
+ const active=running||paused, display=active?remaining:preset
+ return <button id="tool-open-timer" className="tool-launch tool-launch-timer" onClick={()=>{
+   if(!active)startRest(preset)
+   onOpen()
+ }}>
+   <span className="tool-clock"><Timer size={22} aria-hidden="true"/>{Math.floor(display/60)}:{String(display%60).padStart(2,'0')}</span>
+   <span className="tool-launch-label"><strong>Descansos</strong><small>{paused?'Ver descanso en pausa':running?'Ver descanso':finished?'Repetir descanso':'Iniciar descanso'}</small></span>
+   {active?<ChevronRight className="tool-launch-arrow" size={15} aria-hidden="true"/>:<Play className="tool-launch-arrow" size={15} aria-hidden="true"/>}
+ </button>
+}
+
 export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:(text:string)=>void;tool:string;setTool:(tool:string)=>void;barCalculator:ReactNode}){
- const [seconds,setSeconds]=useState(90),[value,setValue]=useState('20'),[unit,setUnit]=useState('kg'),[query,setQuery]=useState(''),[limit,setLimit]=useState(30)
- const [timerEnd,setTimerEnd]=useState<number|null>(null)
+ const seconds=useRestPreset()
+ const [value,setValue]=useState('20'),[unit,setUnit]=useState('kg'),[query,setQuery]=useState(''),[limit,setLimit]=useState(30)
  const [selectedExercise,setSelectedExercise]=useState<Exercise|null>(null)
  const [resourcesOpen,setResourcesOpen]=useState(tool==='tips'||tool==='food')
  const titleRef=useRef<HTMLHeadingElement>(null),lastTool=useRef(tool)
@@ -35,7 +49,6 @@ export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:
    }
  },[selectedExercise])
  useEffect(()=>{
-   if(tool!=='timer') setTimerEnd(null)
    if(tool===lastTool.current) return
    const previous=lastTool.current
    lastTool.current=tool
@@ -61,19 +74,15 @@ export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:
          <span className="tool-launch-label"><strong>Barra y discos</strong><small>Calcular mi carga</small></span>
          <ArrowUpRight className="tool-launch-arrow" size={17} aria-hidden="true"/>
        </button>
-       <button id="tool-open-timer" className="tool-launch tool-launch-timer" onClick={()=>{setTimerEnd(Date.now()+seconds*1000);setTool('timer')}}>
-         <span className="tool-clock"><Timer size={22} aria-hidden="true"/>{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}</span>
-         <span className="tool-launch-label"><strong>Descansos</strong><small>Iniciar descanso</small></span>
-         <Play className="tool-launch-arrow" size={15} aria-hidden="true"/>
-       </button>
+       <RestLauncher onOpen={()=>setTool('timer')}/>
      </div>
    </section>
    <section className="card tool-menu" aria-labelledby="reference-tools-title"><h2 id="reference-tools-title">Para consultar</h2>{toolRow('library')}{toolRow('convert')}{toolRow('calc')}
      <details open={resourcesOpen} onToggle={event=>setResourcesOpen(event.currentTarget.open)}><summary>Guías de entrenamiento y comida</summary>{toolRow('tips')}{toolRow('food')}</details>
    </section></>}
- {tool==='timer'&&<><RestTimer key={seconds} seconds={seconds} initialEnd={timerEnd}/><section className="card"><h3 id="tool-duration-title">Duración del descanso</h3>
-   <div className="tool-choices tool-durations" role="group" aria-labelledby="tool-duration-title">{[30,45,60,90,120,150,180,240,300].map(n=><button key={n} aria-pressed={seconds===n} onClick={()=>{setTimerEnd(null);setSeconds(n)}}>{n<60?n+' s':n%60===0?n/60+' min':Math.floor(n/60)+' min '+n%60+' s'}</button>)}</div>
-   <p className="small-note">Cambiar la duración reinicia el reloj. Al salir de Descansos se detiene.</p></section></>}
+ {tool==='timer'&&<><RestTimer seconds={seconds}/><section className="card"><h3 id="tool-duration-title">Duración del próximo descanso</h3>
+   <div className="tool-choices tool-durations" role="group" aria-labelledby="tool-duration-title">{[30,45,60,90,120,150,180,240,300].map(n=><button key={n} aria-pressed={seconds===n} onClick={()=>setRestPreset(n)}>{n<60?n+' s':n%60===0?n/60+' min':Math.floor(n/60)+' min '+n%60+' s'}</button>)}</div>
+   </section></>}
  {tool==='plates'&&barCalculator}
  {tool==='convert'&&<section className="card"><div className="tool-choices tool-units" role="group" aria-label="Sentido de la conversión">
    <button aria-pressed={unit==='kg'} onClick={()=>setUnit('kg')}>De kg a lb</button><button aria-pressed={unit==='lb'} onClick={()=>setUnit('lb')}>De lb a kg</button></div>

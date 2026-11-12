@@ -26,6 +26,28 @@ beforeEach(()=>{
 })
 afterEach(()=>{cleanup();Object.defineProperty(navigator,'onLine',{configurable:true,value:true})})
 
+it.each(['futura','registrada'])('consultar una rutina %s no desplaza la sesión en curso ni modifica su asistencia',kind=>{
+  const date=kind==='futura'?'2099-01-01':'2026-10-19', plan=planFromRoutine(workoutDays[0])
+  plan.notes='Nota ficticia para consultar'
+  account.values['training:'+date]=plan
+  if(kind==='registrada')account.values['attendance:'+date]={date,title:plan.title,type:'strength',completedAt:date+'T18:00:00Z'}
+  const setReader=vi.fn()
+  render(<TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} reader={null} bookmark={{date:'2026-10-12',index:2}} setReader={setReader} finish={vi.fn()} onDirtyChange={vi.fn()}/>)
+  fireEvent.click(screen.getByRole('button',{name:/Consultar guía|Ver la guía de/}))
+  const note=screen.getByText('Notas de la sesión')
+  fireEvent.click(note)
+  expect(note.closest('details')?.open).toBe(true)
+  expect(screen.getByText(plan.notes)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button',{name:/Siguiente ejercicio/}))
+  expect(screen.getByRole('button',{name:/Ejercicio 2 de/})).toBeTruthy()
+  expect(screen.queryByText('Medir el descanso')).toBeNull()
+  expect(screen.queryByRole('button',{name:/Terminar y registrar|Quitar día entrenado/})).toBeNull()
+  fireEvent.click(screen.getByRole('button',{name:'Volver a la rutina'}))
+  expect(setReader).not.toHaveBeenCalled()
+  expect(account.set).not.toHaveBeenCalled()
+  expect(account.remove).not.toHaveBeenCalled()
+})
+
 it('lets a reader jump to any exercise and return without registering or editing the day',()=>{
   const date='2026-10-19',routine=workoutDays[0]
   account.values['training:'+date]=planFromRoutine(routine)
