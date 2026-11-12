@@ -1,0 +1,123 @@
+/* The fitness notebook. The police workspace and the dock keep their own layout. */
+.fitness-viewport,.access-shell {
+  --paper:#f7f4ec; --sheet:#fffdf7; --rule:#d8ddcc; --pine:#213e33;
+  --quiet:#53675b; --hero:#214436; --hero-text:#fffaf0; --hero-kicker:#d2e4c2;
+  --hero-line:#698271; --tab:#f0f1e7; --accent-stamp:#d09473;
+  --display:ui-serif,"Iowan Old Style","Palatino Linotype",Georgia,serif;
+}
+.dark :is(.fitness-viewport,.access-shell) {
+  --paper:#18231f; --sheet:#212e28; --rule:#415446; --pine:#f1f4e8;
+  --quiet:#bccabb; --hero:#233f33; --hero-line:#577261; --tab:#304139; --accent-stamp:#e5ae88;
+}
+.glass :is(.fitness-viewport,.access-shell) {
+  --paper:#f5f7fd; --sheet:#fff; --rule:#d6deec; --pine:#223753;
+  --quiet:#50627a; --hero:#e7effc; --hero-text:#203451; --hero-kicker:#3c5675;
+  --hero-line:#c0cce1; --tab:#edf1fa; --accent-stamp:#9d75a5;
+}
+.fitness-viewport {
+  background:var(--paper); color:var(--pine);
+}
+.fitness-viewport .app-shell { max-width:1060px; }
+.app-shell > .topbar {
+  margin-bottom:var(--section-space); padding-block:4px 12px;
+  border-bottom:1px solid var(--rule);
+}
+.brand-signature {
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:0;
+  color:var(--quiet); font:650 12px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+.brand-signature b { background:var(--pine); color:var(--sheet); padding:3px 5px; border-radius:4px; font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+.app-shell .topbar h1 { color:var(--pine); letter-spacing:-.045em; font-size:clamp(22px,5.4vw,30px); margin-top:3px; }
+.fitness-viewport .header-actions .icon-button,.access-shell header .icon-button {
+  color:var(--pine); background:var(--sheet); border:1px solid var(--rule); box-shadow:none;
+}
+.access-shell { color:var(--pine); }
+.access-shell>header { padding-bottom:18px; border-bottom:1px solid var(--rule); }
+.access-shell h1 { font-family:var(--display); font-weight:500; }
+.access-shell .account-panel { border-radius:18px; border:1px solid var(--rule); background:var(--sheet); }
+.access-shell .account-panel>h2 { font-family:var(--display); font-weight:500; font-size:30px; }
+.fitness-viewport .card { border-radius:18px; }
+.home-decision,.home-notebook { display:grid; align-content:start; gap:var(--section-space); min-width:0; }
+.app-shell .workspace .day-choice-index { padding:clamp(16px,4.5vw,28px); background:var(--sheet); border:1px solid var(--rule); box-shadow:none; }
+.workspace .day-choice-index .day-date,.workspace .calendar-kicker {
+  margin:0 0 6px; font:700 11px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--quiet); letter-spacing:.055em;
+}
+.workspace .day-choice-index h2 {
+  font:500 clamp(26px,6.5vw,42px)/1.06 var(--display);
+  letter-spacing:-.045em; text-wrap:balance; margin:7px 0 12px;
+}
+.home-decision .day-choice-index.card {
+  position:relative; isolation:isolate; overflow:hidden;
+  background:var(--hero); color:var(--hero-text); border-color:var(--hero-line);
+}
+.home-decision .day-choice-index::before {
+  content:""; position:absolute; pointer-events:none; z-index:-1; inset:0;
+  background:repeating-radial-gradient(ellipse at 105% -38%,transparent 0 20px,var(--hero-line) 21px,transparent 22px 36px);
+  opacity:.28; mask-image:linear-gradient(105deg,transparent 52%,#000);
+}
+.home-decision .day-choice-index h2 { color:var(--hero-text); max-width:18ch; }
+.home-decision .day-choice-index > .day-date,.home-decision .day-choice-index > p:not(.day-date) { color:var(--hero-kicker); }
+.workspace .day-choice-index .choice-menu {
+  display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:7px; margin:16px 0 0;
+}
+.workspace .day-choice-index .choice-menu-row {
+  display:flex; align-items:flex-start; justify-content:flex-start; flex-direction:column;
+  gap:9px; padding:12px 10px; border:1px solid transparent; border-radius:13px;
+  color:var(--tile-ink); background:var(--tile); box-shadow:none; text-align:left;
+}
+.choice-menu-strength { --tile:#f8dfc6; --tile-ink:#5a371e; }
+.choice-menu-cardio { --tile:#cdece3; --tile-ink:#174c46; }
+.choice-menu-recovery { --tile:#e6e9c7; --tile-ink:#454e29; }
+.dark .choice-menu-strength { --tile:#493a30; --tile-ink:#ffe0c3; }
+.dark .choice-menu-cardio { --tile:#2b4844; --tile-ink:#cbefe8; }
+.dark .choice-menu-recovery { --tile:#3e4936; --tile-ink:#e6edc7; }
+.glass .choice-menu-strength { --tile:#f5e3eb; --tile-ink:#613747; }
+.glass .choice-menu-cardio { --tile:#dcecf9; --tile-ink:#244b6a; }
+.glass .choice-menu-recovery { --tile:#e9e5fa; --tile-ink:#494065; }
+.day-choice-index .choice-menu-icon { background:transparent; color:inherit; width:auto; height:auto; border-radius:0; }
+.day-choice-index .choice-menu-row>svg { display:none; }
+.day-choice-index .choice-menu-copy strong { font-size:clamp(14px,3.6vw,18px); color:inherit; }
+.day-choice-index .choice-menu-copy small { color:inherit; font-weight:450; }
+.workspace .saved-day-shortcut { gap:8px; margin-top:14px; padding-top:10px; }
+.home-decision .saved-day-shortcut { border-color:var(--hero-line); }
+.saved-plan-link { min-width:0; display:flex; align-items:center; gap:6px; flex:1; min-height:44px; padding:0; text-align:left; background:none; border:0; color:inherit; }
+.saved-plan-link span { min-width:0; display:grid; gap:3px; }
+.saved-plan-link strong { font-size:14px; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:3px; }
+.saved-plan-link svg { flex:none; }
+.home-decision .saved-plan-link small { color:var(--hero-kicker); }
+.home-decision .saved-day-shortcut>.secondary { color:var(--hero-text); background:transparent; border:1px solid var(--hero-line); box-shadow:none; }
+.home-notebook .home-week-card { background:var(--sheet); border:1px solid var(--rule); box-shadow:none; }
+.home-week-open strong { font:500 25px/1.15 var(--display); color:var(--pine); }
+.home-week-open small { color:var(--quiet); }
+.home-notebook .home-week-strip { border-top:1px solid var(--rule); padding-top:8px; margin-top:10px; }
+.home-week-strip i { position:relative; color:var(--pine); background:var(--tab); font-variant-numeric:tabular-nums; }
+.home-week-strip .trained i { background:var(--pine); color:var(--sheet); }
+.home-week-strip i svg { position:absolute; right:-4px; bottom:-2px; border:1px solid var(--sheet); box-sizing:content-box; border-radius:50%; color:var(--sheet); background:var(--pine); }
+.app-shell .home-secondary-links { border:0; border-top:1px solid var(--rule); border-radius:0; background:none; box-shadow:none; }
+.home-secondary-links .week-plan-link { padding-block:10px; }
+.app-shell .workspace>.date-browser { border:1px solid var(--rule); background:var(--sheet); box-shadow:none; }
+.workspace .training-calendar-header .calendar-kicker { margin:0 0 4px; color:var(--quiet); }
+.workspace .date-browser .training-calendar-header h2 { font:500 clamp(20px,5vw,27px)/1.1 var(--display); }
+.workspace .training-week-strip button { font-variant-numeric:tabular-nums; }
+.workspace .training-week-strip .selected .calendar-plan-marker { border-color:currentColor; }
+.workspace .training-calendar-grid button { min-width:0; }
+.fitness-viewport .workspace :is(button,a,summary):focus-visible,.access-shell :is(button,input,summary):focus-visible { outline:3px solid var(--olive); outline-offset:2px; }
+.home-decision .day-choice-index :is(button,a):focus-visible { outline-color:var(--hero-text); }
+@media(max-width:519px) {
+  .day-choice-index .choice-menu-copy small { display:none; }
+}
+@media(min-width:760px) {
+  .app-shell .simple-day-home { grid-template-columns:minmax(0,1.45fr) minmax(255px,.85fr); align-items:start; }
+  .workspace--training { max-width:760px; margin-inline:auto; width:100%; }
+  .home-decision .day-choice-index h2 { font-size:clamp(34px,3.6vw,48px); }
+  .workspace .day-choice-index .choice-menu-row { padding:15px 12px; gap:14px; }
+}
+@media(max-width:355px) {
+  .workspace .day-choice-index .choice-menu { gap:5px; }
+  .workspace .day-choice-index .choice-menu-row { padding:10px 6px; }
+  .app-shell .topbar .brand .koala-logo { width:32px; height:36px; }
+  .app-shell .topbar { gap:6px; }
+}
+@media(forced-colors:active) {
+  .workspace .day-choice-index .choice-menu-row,.home-week-strip i { border:1px solid ButtonText; }
+}

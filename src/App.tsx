@@ -103,7 +103,7 @@ function Workspace(){
   useEffect(()=>{
     document.documentElement.classList.toggle('dark',theme==='dark');document.documentElement.classList.toggle('glass',theme==='glass')
     document.documentElement.dataset.theme=theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='glass'?'#ffffff':theme==='dark'?'#18221e':'#f8f6f1')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='glass'?'#f5f7fd':theme==='dark'?'#18231f':'#f7f4ec')
   },[theme])
   useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[navigation.section])
   useEffect(()=>{
@@ -123,7 +123,7 @@ function Workspace(){
   const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   const themeControl=<button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button>
-  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="eyebrow">PLAN Lolo & alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu plan'}</h1></div>{themeControl}</header><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
+  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="brand-signature"><b>Plan</b> Lolo &amp; alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu espacio personal'}</h1></div>{themeControl}</header><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
   const blockedUpdate=trainingDirty||policeUpdateBlocked||storage.saving||account.saving||!!storage.error||!!account.error
   const serviceNotice=<>
@@ -144,7 +144,7 @@ function Workspace(){
   return <div className="fitness-viewport" style={keyboardHeight ? {height:keyboardHeight} : undefined}>
     <div id="fitness-scroll"><div className="app-shell">
     {serviceNotice}
-    <header className="topbar"><div className="brand"><Koala/><div><span className="eyebrow">PLAN Lolo & alexia</span><h1>{{home:'Inicio',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
+    <header className="topbar"><div className="brand"><Koala/><div><span className="brand-signature"><b>Plan</b> Lolo &amp; alexia</span><h1>{{home:'Inicio',training:'Entrenamientos',nutrition:'Herramientas',progress:'Tu progreso',more:'Ajustes'}[section]}</h1></div></div><div className="header-actions">{themeControl}<SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
     <main className={`workspace workspace--${section}`} tabIndex={-1}>
       {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining} onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}

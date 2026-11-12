@@ -3,19 +3,24 @@ import { useState, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ProgressScreen } from './ProgressScreen'
-import { isoDate } from './lib/dates'
+import { addDays, isoDate } from './lib/dates'
+import type { ProgressLog } from './types'
 
 const save = vi.hoisted(() => vi.fn())
+let values: Record<string, ProgressLog> = {}
 vi.mock('./lib/account', () => ({
   AccountGate: ({ children }: { children: ReactNode }) => children,
   useCloudValue: <T,>(_key: string, initial: T | (() => T)) => useState(initial),
   useAccount: () => ({
-    values: { 'progress:test': { id: 'test', date: isoDate(), notes: '', weight: 58, waist: 70, hip: 90 } },
+    values,
     set: save,
     flush: async () => {},
   }),
 }))
-beforeEach(() => vi.stubGlobal('requestAnimationFrame', vi.fn()))
+beforeEach(() => {
+  values = { 'progress:test': { id: 'test', date: isoDate(), notes: '', weight: 58, waist: 70, hip: 90 } }
+  vi.stubGlobal('requestAnimationFrame', vi.fn())
+})
 afterEach(() => { cleanup(); save.mockClear(); vi.unstubAllGlobals() })
 
 it.each(['Hip thrust', 'Bienestar'])('protege las medidas al abrir %s y conserva sus valores al guardar', async (category) => {
@@ -57,4 +62,31 @@ it('muestra únicamente el dato elegido y guarda juntos los cambios de dos categ
   await waitFor(()=>expect(save).toHaveBeenCalledWith('progress:test',expect.objectContaining({
     weight:59.2,hipThrustKg:45,waist:70,hip:90,
   })))
+})
+
+it('destaca el récord aunque el último entrenamiento tenga una carga menor', () => {
+  const today = isoDate()
+  values = {
+    'progress:first': { id:'first', date:addDays(today,-9), hipThrustKg:40, notes:'' },
+    'progress:best': { id:'best', date:addDays(today,-5), hipThrustKg:55, hipThrustReps:6, notes:'' },
+    'progress:latest': { id:'latest', date:today, hipThrustKg:50, notes:'' },
+  }
+  render(<ProgressScreen hide notify={vi.fn()} onTraining={vi.fn()}/>)
+  const strength = within(screen.getByRole('region', {name:'Hip thrust'}))
+  expect(strength.getByText('Tu carga máxima').nextElementSibling?.textContent).toContain('55 kg')
+  expect(strength.getByText('+15 kg desde tu primera marca')).toBeDefined()
+  expect(strength.getByText('Ver evolución del hip thrust')).toBeDefined()
+})
+
+it('solo ofrece reanudar cuando hay un cambio pendiente y lo conserva al cerrar', () => {
+  render(<ProgressScreen hide={false} notify={vi.fn()} onTraining={vi.fn()}/>)
+  fireEvent.click(screen.getByRole('button', {name:'Peso'}))
+  fireEvent.click(screen.getByRole('button', {name:'Cerrar'}))
+  expect(screen.queryByRole('button', {name:/Continuar edición/})).toBeNull()
+  fireEvent.click(screen.getByRole('button', {name:'Peso'}))
+  fireEvent.change(screen.getByLabelText('Peso corporal (kg)'), {target:{value:'59,2'}})
+  fireEvent.click(screen.getByRole('button', {name:'Cerrar'}))
+  fireEvent.click(screen.getByRole('button', {name:/Continuar edición/}))
+  expect((screen.getByLabelText('Peso corporal (kg)') as HTMLInputElement).value).toBe('59,2')
+  expect(save).not.toHaveBeenCalled()
 })

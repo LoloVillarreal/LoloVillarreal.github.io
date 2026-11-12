@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, BookOpen, Calculator, ChevronRight, Dumbbell, Library, Scale, Timer, Utensils } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, BookOpen, Calculator, ChevronRight, Dumbbell, Library, Play, Scale, Timer, Utensils } from 'lucide-react'
 import { Calculators, NutritionScreen } from './screens'
 import { RestTimer } from './RestTimer'
+import BarbellDrawing from './BarbellDrawing'
 import { ExerciseDetails } from './ExercisePhoto'
 import { exerciseImage, exerciseLibrary, matchesExercise } from './lib/exercise-library'
 import { kgToLb, lbToKg } from './lib/gym-tools'
@@ -12,9 +13,9 @@ import type { Exercise } from './types'
 const tools = {
  timer: {title:'Descansos', hint:'Cronometra el tiempo entre series', icon:Timer},
  plates: {title:'Barra y discos', hint:'Monta tu barra y ve cuánto pesa', icon:Dumbbell},
- convert: {title:'Conversor kg / lb', hint:'Pasa de kilos a libras o al revés', icon:Scale},
- library: {title:'Biblioteca de ejercicios', hint:'Consulta fotos, técnica y alternativas', icon:Library},
- calc: {title:'Calculadoras', hint:'Consulta IMC, energía y macronutrientes', icon:Calculator},
+ convert: {title:'Conversor kg / lb', hint:'Kilos y libras en ambos sentidos', icon:Scale},
+ library: {title:'Biblioteca de ejercicios', hint:'Fotos, técnica y alternativas', icon:Library},
+ calc: {title:'Calculadoras', hint:'IMC, energía y macronutrientes', icon:Calculator},
  tips: {title:'Guía práctica', hint:'Dudas habituales del entrenamiento', icon:BookOpen},
  food: {title:'Ideas para comer', hint:'Consulta desayunos y menús', icon:Utensils},
 }
@@ -22,6 +23,7 @@ type ToolId = keyof typeof tools
 
 export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:(text:string)=>void;tool:string;setTool:(tool:string)=>void;barCalculator:ReactNode}){
  const [seconds,setSeconds]=useState(90),[value,setValue]=useState('20'),[unit,setUnit]=useState('kg'),[query,setQuery]=useState(''),[limit,setLimit]=useState(30)
+ const [timerEnd,setTimerEnd]=useState<number|null>(null)
  const [selectedExercise,setSelectedExercise]=useState<Exercise|null>(null)
  const [resourcesOpen,setResourcesOpen]=useState(tool==='tips'||tool==='food')
  const titleRef=useRef<HTMLHeadingElement>(null),lastTool=useRef(tool)
@@ -33,6 +35,7 @@ export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:
    }
  },[selectedExercise])
  useEffect(()=>{
+   if(tool!=='timer') setTimerEnd(null)
    if(tool===lastTool.current) return
    const previous=lastTool.current
    lastTool.current=tool
@@ -50,12 +53,26 @@ export default function ToolsScreen({notify,tool,setTool,barCalculator}:{notify:
    </button>
  }
  return <>{tool?<header className="tools-heading"><button className="text-button" onClick={()=>setTool('')}><ArrowLeft size={16}/>Todas las herramientas</button><h2 ref={titleRef} tabIndex={-1}>{tools[tool as ToolId]?.title}</h2></header>:<>
-   <section className="card tool-menu" aria-labelledby="gym-tools-title"><h2 id="gym-tools-title">En el gimnasio</h2>{(['timer','plates','convert','library'] as const).map(toolRow)}</section>
-   <section className="card tool-menu" aria-labelledby="reference-tools-title"><h2 id="reference-tools-title">Para consultar</h2>{toolRow('calc')}
-     <details open={resourcesOpen} onToggle={event=>setResourcesOpen(event.currentTarget.open)}><summary>Curiosidades y recursos</summary>{toolRow('tips')}{toolRow('food')}</details>
+   <section className="tool-featured" aria-labelledby="gym-tools-title">
+     <h2 id="gym-tools-title">En el gimnasio</h2>
+     <div className="tool-launchers">
+       <button id="tool-open-plates" className="tool-launch tool-launch-plates" onClick={()=>setTool('plates')}>
+         <span className="tool-launch-art"><BarbellDrawing shape="straight" miniature plates={[{weight:25,count:1,color:'#ec7163'},{weight:5,count:1,color:'#d7dedd'}]}/></span>
+         <span className="tool-launch-label"><strong>Barra y discos</strong><small>Calcular mi carga</small></span>
+         <ArrowUpRight className="tool-launch-arrow" size={17} aria-hidden="true"/>
+       </button>
+       <button id="tool-open-timer" className="tool-launch tool-launch-timer" onClick={()=>{setTimerEnd(Date.now()+seconds*1000);setTool('timer')}}>
+         <span className="tool-clock"><Timer size={22} aria-hidden="true"/>{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}</span>
+         <span className="tool-launch-label"><strong>Descansos</strong><small>Iniciar descanso</small></span>
+         <Play className="tool-launch-arrow" size={15} aria-hidden="true"/>
+       </button>
+     </div>
+   </section>
+   <section className="card tool-menu" aria-labelledby="reference-tools-title"><h2 id="reference-tools-title">Para consultar</h2>{toolRow('library')}{toolRow('convert')}{toolRow('calc')}
+     <details open={resourcesOpen} onToggle={event=>setResourcesOpen(event.currentTarget.open)}><summary>Guías de entrenamiento y comida</summary>{toolRow('tips')}{toolRow('food')}</details>
    </section></>}
- {tool==='timer'&&<><RestTimer key={seconds} seconds={seconds}/><section className="card"><h3 id="tool-duration-title">Duración del descanso</h3>
-   <div className="tool-choices tool-durations" role="group" aria-labelledby="tool-duration-title">{[30,45,60,90,120,150,180,240,300].map(n=><button key={n} aria-pressed={seconds===n} onClick={()=>setSeconds(n)}>{n<60?n+' s':n%60===0?n/60+' min':Math.floor(n/60)+' min '+n%60+' s'}</button>)}</div>
+ {tool==='timer'&&<><RestTimer key={seconds} seconds={seconds} initialEnd={timerEnd}/><section className="card"><h3 id="tool-duration-title">Duración del descanso</h3>
+   <div className="tool-choices tool-durations" role="group" aria-labelledby="tool-duration-title">{[30,45,60,90,120,150,180,240,300].map(n=><button key={n} aria-pressed={seconds===n} onClick={()=>{setTimerEnd(null);setSeconds(n)}}>{n<60?n+' s':n%60===0?n/60+' min':Math.floor(n/60)+' min '+n%60+' s'}</button>)}</div>
    <p className="small-note">Cambiar la duración reinicia el reloj. Al salir de Descansos se detiene.</p></section></>}
  {tool==='plates'&&barCalculator}
  {tool==='convert'&&<section className="card"><div className="tool-choices tool-units" role="group" aria-label="Sentido de la conversión">

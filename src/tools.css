@@ -30,6 +30,64 @@
 .tool-units { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
 .tool-durations, .tool-search-shortcuts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tool-search-shortcuts button { border-radius: 24px; font-weight: 500; }
+.tool-featured h2, .workspace .tool-menu h2 {
+  margin: 0 0 12px; font-size: 1rem; letter-spacing: -.02em;
+}
+.tool-launchers { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.tool-launch {
+  position: relative; display: grid; align-content: space-between; align-items: start;
+  min-width: 0; min-height: 134px; padding: 14px; border: 1px solid var(--line);
+  border-radius: 18px; text-align: left; color: var(--text);
+}
+.tool-launch-plates { background: #244b3e; color: #fffaf0; border-color: #244b3e; }
+.tool-launch-timer { background: var(--surface2); }
+.tool-launch-art, .tool-clock { align-self: center; height: 53px; display: flex; align-items: center; }
+.tool-launch-art { width: min(100%, 230px); }
+.tool-launch-art .barbell-drawing { max-height: 53px; }
+.tool-clock { gap: 7px; color: var(--olive); font-size: clamp(1.55rem,6vw,2.15rem); font-weight: 650; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+.tool-clock svg { flex-shrink: 0; stroke-width: 1.7; }
+.tool-launch-label { display: grid; gap: 3px; padding-right: 16px; }
+.tool-launch-label strong { font-size: clamp(.99rem,3.6vw,1.3rem); line-height: 1.12; letter-spacing: -.035em; }
+.tool-launch-label small { font-size: .77rem; line-height: 1.23; font-weight: 500; }
+.tool-launch-plates small { color: #d2e5d9; }
+.tool-launch-timer small { color: var(--muted); }
+.tool-launch-arrow { position: absolute; right: 10px; bottom: 13px; }
+.dark .tool-launch-plates { background: #2c4a3d; border-color: #516b59; }
+.glass .tool-launch-plates { background: #2d4769; border-color: #2d4769; }
+.glass .tool-launch-plates small { color: #e9f3ff; }
+.tool-menu .tool-row-icon { width: 35px; height: 35px; }
+.tool-menu summary { font-size: .9rem; }
+.food-guide { display: grid; gap: 14px; min-width: 0; }
+.food-guide .food-tabs { margin: 0; }
+.food-recipes { display: grid; gap: 9px; align-items: start; }
+.food-recipe { padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+.food-recipe summary {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  gap: clamp(9px, 3vw, 16px); padding: 0 14px 0 0; color: var(--text); list-style: none;
+  min-height: 72px; font-size: 1rem; font-weight: 650; line-height: 1.25;
+}
+.food-recipe summary:focus-visible { outline-offset: -3px; }
+.food-recipe summary::-webkit-details-marker { display: none; }
+.food-recipe summary img { display: block; width: clamp(70px,20vw,98px); height: 76px; object-fit: cover; }
+.food-recipe summary svg { color: var(--olive); }
+.food-recipe[open] summary svg { transform: rotate(180deg); }
+.food-recipe-body { border-top: 1px solid var(--line); padding: 14px; }
+.food-recipe-body h3 { font-size: .85rem; margin: 12px 0 3px; }
+.food-recipe-body p { margin: 0; color: var(--text); font-size: .9rem; line-height: 1.5; }
+.food-recipe-body .food-tip { margin-top: 10px; }
+.food-guide .food-reference { padding: 3px var(--panel-space,16px); }
+.food-reference > details { border: 0; padding: 0; }
+.food-reference > details + details { border-top: 1px solid var(--line); }
+.food-reference summary { padding: 13px 0; min-height: 44px; }
+.food-reference [open] { padding-bottom: 12px; }
+.food-reference .menu-reference ul { list-style: none; padding: 0; margin: 8px 0; }
+.food-reference .menu-reference li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; font-size: .85rem; }
+.food-reference .menu-reference li span:last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--muted); }
+@media (min-width: 640px) {
+  .tool-launch { min-height: 152px; padding: 18px; }
+  .tool-launch-arrow { right: 18px; bottom: 19px; }
+  .food-recipes { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .tool-row-icon, .tool-choices button, .tool-search-shortcuts button {
     transition: background-color .15s ease, color .15s ease, border-color .15s ease;

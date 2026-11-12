@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
 import { useState } from 'react'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
+import { StorageProvider } from './lib/storage'
 
 function Tools() {
   const [tool, setTool] = useState('')
@@ -12,7 +13,37 @@ function Tools() {
   return <ToolsScreen tool={tool} setTool={setTool} notify={vi.fn()} barCalculator={<BarbellCalculator setup={setup} setSetup={setSetup}/>}/>
 }
 
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+
+it('inicia el descanso desde el índice y estrena el tiempo elegido cuando se vuelve a abrir', () => {
+  vi.useFakeTimers()
+  render(<Tools/>)
+  fireEvent.click(screen.getByRole('button',{name:/Descansos.*Iniciar descanso/}))
+  act(()=>vi.advanceTimersByTime(10000))
+  expect(screen.getByRole('timer').textContent).toBe('1:20')
+  fireEvent.click(screen.getByRole('button',{name:'45 s'}))
+  expect(screen.getByRole('button',{name:'Empezar descanso'})).toBeTruthy()
+  fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
+  fireEvent.click(screen.getByRole('button',{name:/0:45.*Descansos/}))
+  act(()=>vi.advanceTimersByTime(1000))
+  expect(screen.getByRole('timer').textContent).toBe('0:44')
+})
+
+it('mantiene las ideas de comida como guía opcional y vuelve al tipo de comida elegido', async () => {
+  render(<StorageProvider><Tools/></StorageProvider>)
+  fireEvent.click(await screen.findByText('Guías de entrenamiento y comida'))
+  fireEvent.click(screen.getByRole('button',{name:/Ideas para comer/}))
+  fireEvent.click(screen.getByRole('button',{name:'Cenas'}))
+  const dinner=screen.getByText('Salmón, patata y verdura').closest('details')!
+  fireEvent.click(dinner.querySelector('summary')!)
+  expect(dinner.open).toBe(true)
+  expect(within(dinner).getByRole('heading',{name:'Alternativas'})).toBeTruthy()
+  fireEvent.click(screen.getByText('Menú semanal de referencia'))
+  expect(within(screen.getByLabelText('Día del menú')).getAllByRole('option')).toHaveLength(7)
+  fireEvent.click(screen.getByRole('button',{name:'Todas las herramientas'}))
+  fireEvent.click(screen.getByRole('button',{name:/Ideas para comer/}))
+  expect(screen.getByRole('button',{name:'Cenas'}).getAttribute('aria-pressed')).toBe('true')
+})
 
 it('cambia el sentido de conversión y devuelve el foco a la herramienta al salir', () => {
   render(<Tools/>)

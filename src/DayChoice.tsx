@@ -127,7 +127,7 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
       setCustom(false)
       requestAnimationFrame(()=>customButton.current?.focus())
     }} onSaved={onSaved}/>
-  return <section className="card day-choice">
+  return <section className={'card day-choice'+(!kind?' day-choice-index':'')}>
     <p className="day-date">{new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(parseDate(date))}</p>
     {kind&&<button type="button" className="choice-type-back" disabled={busy||written.current}
       onClick={()=>{setKind(undefined);setPreview(false);setError('');requestAnimationFrame(()=>heading.current?.focus({preventScroll:true}))}}>

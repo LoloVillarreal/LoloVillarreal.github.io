@@ -18,7 +18,7 @@ export function TrainingCalendar({date,onChange}:{date:string;onChange:(date:str
   const moveMonth=(direction:number)=>{const next=parseDate(first);next.setMonth(next.getMonth()+direction);const value=isoDate(next);if(validDate(value))onChange(value)}
   return <section className={`card date-browser training-calendar${expanded?'':' is-compact'}`} aria-labelledby={headingId}>
     <header className="training-calendar-header">
-      <div><h2 id={headingId}>{!expanded ? `Semana del ${shortDate(mondayOf(date))}` : new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(monthDate)}</h2></div>
+      <div><p className="calendar-kicker">Calendario de entrenos</p><h2 id={headingId}>{!expanded ? `Semana del ${shortDate(mondayOf(date))}` : new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(monthDate)}</h2></div>
       <div className="training-calendar-arrows"><button className="icon-button" aria-label={expanded?'Mes anterior':'Semana anterior'} onClick={()=>expanded?moveMonth(-1):onChange(addDays(date,-7))}><ChevronLeft/></button><button className="icon-button" aria-label={expanded?'Mes siguiente':'Semana siguiente'} onClick={()=>expanded?moveMonth(1):onChange(addDays(date,7))}><ChevronRight/></button></div>
     </header>
     {expanded&&<label className="date-browser-jump">Ir a una fecha<input aria-label="Consultar entrenamiento" type="date" value={date} onChange={event=>{if(validDate(event.target.value))onChange(event.target.value)}}/></label>}

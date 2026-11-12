@@ -41,17 +41,16 @@ function SavedDayChoice({date,plan,onChoose,onStart,onDetails,edit=false}:{
   date:string;plan:TrainingPlan;onChoose:(kind:TrainingPlan['type'])=>void;onStart:()=>void;onDetails:()=>void;edit?:boolean
 }){
   const action=plan.type==='recovery'?'Ver descanso':plan.type==='cardio'?'Empezar cardio':'Empezar entrenamiento'
-  return <section className={'card day-choice saved-day-choice'+(edit?' training-overview':'')} tabIndex={-1}>
+  return <section className={'card day-choice day-choice-index saved-day-choice'+(edit?' training-overview':'')} tabIndex={-1}>
     <p className="day-date">{dateLabel(date)}</p>
     <h2>{date===isoDate()?'¿Qué quieres hacer hoy?':'¿Qué quieres hacer este día?'}</h2>
     <ActivityMenu date={date} onChoose={onChoose}/>
     <div className="saved-day-shortcut">
-      <div><small>Tu plan guardado</small><strong>{plan.title}</strong></div>
+      <button type="button" className="saved-plan-link" onClick={onDetails} aria-label={(edit?'Editar detalles: ':'Ver el plan de hoy: ')+plan.title}><span><small>Tu plan guardado</small><strong>{plan.title}</strong></span><ChevronRight size={16} aria-hidden="true"/></button>
       <button className="secondary" disabled={plan.type==='strength'&&!plan.exercises.length} aria-label={action} onClick={onStart}>
         <Play size={15} aria-hidden="true"/>{plan.type==='recovery'?'Ver guía':'Empezar'}
       </button>
     </div>
-    <button className="text-button saved-day-details" onClick={onDetails}>{edit?'Editar detalles':'Ver el plan de hoy'}<ChevronRight size={14} aria-hidden="true"/></button>
   </section>
 }
 
@@ -91,6 +90,7 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
   }
   const daySummary = day.type === 'strength' ? `${day.exercises.length} ejercicios` : day.objective
   return <div className="simple-day-home">
+    <div className="home-decision">
     {account.loading ? <section className="card" role="status">Recuperando tu elección…</section>
       : waitingForPlan && reader ? <section className="card simple-day-intro">
         <p className="day-date">{dateLabel(reader.date)}</p>
@@ -129,6 +129,8 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
     {reader && reader.date !== today && trainingEntryValid('training:'+reader.date,account.values['training:'+reader.date]) && <button className="secondary" onClick={()=>startTraining(reader.date,reader.index)}>
       Continuar la sesión del {shortDate(reader.date)}<ChevronRight size={16}/>
     </button>}
+    </div>
+    <div className="home-notebook">
     {showNext && <button className="next-strength-link" onClick={()=>go('training',nextDate)}>
       <Dumbbell size={19} aria-hidden="true"/><span><small>Fuerza otro día</small><strong>
         {dateLabel(nextDate)}
@@ -138,16 +140,17 @@ export function HomeScreen({go,reader,startTraining,onStrength,onDirtyChange,onS
       <button className="home-week-open" onClick={()=>go('progress')}><span>
         <strong>Mi progreso</strong><small>{account.loading?'Cargando…':account.error?'Consultar mis registros':`${trainingDays} ${trainingDays===1?'día entrenado':'días entrenados'} esta semana`}</small>
       </span><ChevronRight size={18}/></button>
-      {!account.loading && !account.error && <><p className="home-week-hint">Toca un día para ver su entrenamiento.</p><ol aria-label="Actividad de la semana" className="home-week-strip">
+      {!account.loading && !account.error && <><ol aria-label="Actividad de la semana" className="home-week-strip">
         {weekStrip.map(({date,trained},i)=><li key={date} className={trained?'trained':''}><button type="button" onClick={()=>go('training',date)} aria-current={date===today?'date':undefined}
           aria-label={dateLabel(date)+(date===today?', hoy':'')+(trained?', entrenado':date<=today?', sin registro':', próximo')}>
           <span aria-hidden="true">{['L','M','X','J','V','S','D'][i]}</span>
-          <i aria-hidden="true">{trained?<Check size={12}/>:parseDate(date).getDate()}</i>
+          <i aria-hidden="true">{parseDate(date).getDate()}{trained&&<Check size={10} strokeWidth={3}/>}</i>
         </button></li>)}
       </ol></>}
     </section>
     <div className="card simple-day-links home-secondary-links">
       <WeekPlan/>
+    </div>
     </div>
   </div>
 }
@@ -230,7 +233,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       target?.scrollIntoView({block:'center'})
     })
   }
-  const calendar=<TrainingCalendar date={date} onChange={value=>{
+  const calendar=<TrainingCalendar key="calendar" date={date} onChange={value=>{
       if(value===date)return
       if(choiceDirty.current&&!confirm('¿Cambiar de fecha y descartar esta elección?'))return
       setPickingDate('');onDirtyChange(false);setDate(value)
@@ -244,6 +247,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     cardio={saved.cardio} onStep={index=>setReader({date,index})}
     onExit={()=>closeGuide('summary')} notify={notify} onRegistered={confirmedRegistration}/>
   if(recorded && pickingDate!==date)return <>
+    {calendar}
     {attendanceControl}
     <section className="card recorded-plan-options">
       <h2>Plan de este día</h2>
@@ -251,19 +255,21 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(date)}}>{hasPlan?'Cambiar mi elección':'Añadir un plan a este día'}</button>
       {hasPlan && <button className="text-button" onClick={()=>setEditing(true)}>Editar detalles</button>}
     </section>
-    {calendar}{(hasPlan||deletedPlan)&&management}
+    {(hasPlan||deletedPlan)&&management}
   </>
   if(!hasPlan || pickingDate===date)return <>
+    {pickingDate!==date&&calendar}
     {attendanceControl}
     <DayChoice key={'choice:'+date} date={date} initialKind={hasPlan&&pickingDate===date?initialKind.current:undefined} previousPlan={hasPlan?saved:undefined} returnToRecord={recorded} onCancel={()=>{
       setPickingDate('')
       requestAnimationFrame(()=>(choiceTrigger.current??document.getElementById('choose-activity-'+initialKind.current))?.focus())
     }} onDirtyChange={trackChoice} onBegin={()=>setPickingDate(date)}
       onSaved={start=>{finish(date);setPickingDate('');onDirtyChange(false);if(start)setReader({date,index:0});notify('Elección guardada en tu cuenta.')}}/>
-    {calendar}
+    {pickingDate===date&&calendar}
     {deletedPlan&&management}
   </>
   return <>
+    {calendar}
     {bookmark?.date!==date ? <SavedDayChoice date={date} plan={saved} edit onChoose={kind=>{initialKind.current=kind;setPickingDate(date)}}
       onStart={()=>setReader({date,index:0})} onDetails={()=>setEditing(true)}/>
     : <section tabIndex={-1} className="card training-overview simple-day-intro">
@@ -279,7 +285,6 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
       </div>
     </section>}
     {attendanceControl}
-    {calendar}
     {selected.type==='strength' ? <section className="card routine-preview">
       <h2>Ejercicios del día</h2>
       {selected.exercises.length===0&&<p className="empty">Edita el plan de este día para añadir un ejercicio.</p>}
@@ -413,12 +418,43 @@ const foodIdeas:Record<FoodCategory,{title:string;description:string;tile:number
 export function NutritionScreen(){
   const [category,setCategory]=useStored<FoodCategory>('nutritionCategory','breakfast')
   const [day,setDay]=useState(new Date().getDay())
-  const selected=menu.find(x=>x.day===day)!,total=dayNutrients(selected)
-  return <>
-    <section className="card"><p className="eyebrow">IDEAS PARA TU DÍA A DÍA</p><h2>Comer con más facilidad</h2><p>Opciones que puedes combinar según tus gustos, horarios y apetito. El menú es una referencia flexible.</p></section>
-    <div className="food-tabs" role="group" aria-label="Tipo de comida">{([['breakfast','Desayunos'],['lunch','Comidas'],['dinner','Cenas'],['snack','Meriendas']] as const).map(([id,label])=><button key={id} className={category===id?'active':''} aria-pressed={category===id} onClick={()=>setCategory(id)}>{label}</button>)}</div>
-    {foodIdeas[category].map(idea=><article className="card food-idea" key={idea.title}><img className="food-photo" src={`./food/${idea.tile}.jpg`} alt={`Imagen ilustrativa: ${idea.title}`} loading="lazy" width="480" height="480"/><div className="food-copy"><h2>{idea.title}</h2><p>{idea.description}</p><div className="alternative-box"><h3>Otra forma de hacerlo</h3><p>{idea.swap}</p></div><p className="food-tip">✦ {idea.tip}</p></div></article>)}
-    <section className="card"><h2>Una estructura para orientarte</h2><p>Combina alimentos que aporten proteína, verduras o fruta, una fuente de carbohidratos y grasas que te gusten; adapta las proporciones a tu apetito y actividad.</p><p>Antes de entrenar, elige algo que digieras bien y deja el tiempo que necesites; después, vuelve a tus comidas habituales.</p></section>
-    <section className="card"><details><summary>Ver el menú semanal de referencia</summary><label>Día del menú<select value={day} onChange={e=>setDay(+e.target.value)}>{menu.map(d=><option key={d.day} value={d.day}>{d.name}</option>)}</select></label>{selected.meals.map(meal=><div className="menu-reference" key={meal.id}><h3>{meal.name}</h3><p>{meal.ingredients.map(i=>`${foods[i.foodId].name}: ${fmt(i.amount)} ${foods[i.foodId].unit==='unit'?'ud.':'g'}`).join(' · ')}</p>{meal.alternatives?.length?<p className="small-note">Alternativas: {meal.alternatives.join(' · ')}</p>:null}</div>)}<p className="small-note">Referencia estimada del menú base: {fmt(total.kcal)} kcal · proteína {fmt(total.protein)} g · carbohidratos {fmt(total.carbs)} g · grasas {fmt(total.fat)} g.</p></details><p className="source-note">Valores genéricos basados principalmente en <a href="https://fdc.nal.usda.gov/data-documentation/" target="_blank" rel="noreferrer">USDA FoodData Central</a>. Consulta las etiquetas de los productos. Cantidades del menú en crudo, salvo indicación; las imágenes muestran platos preparados e ilustrativos. No es una prescripción clínica.</p></section>
-  </>
+  const selected=menu.find(item=>item.day===day)!,total=dayNutrients(selected)
+  const activeCategory=Object.keys(foodIdeas).includes(category)?category:'breakfast'
+  return <div className="food-guide">
+    <div className="food-tabs" role="group" aria-label="Tipo de comida">
+      {([['breakfast','Desayunos'],['lunch','Comidas'],['dinner','Cenas'],['snack','Meriendas']] as const).map(([id,label])=>
+        <button key={id} className={activeCategory===id?'active':''} aria-pressed={activeCategory===id} onClick={()=>setCategory(id)}>{label}</button>)}
+    </div>
+    <div className="food-recipes">
+      {foodIdeas[activeCategory].map(idea=><details key={idea.title} className="food-recipe">
+        <summary>
+          <img src={'./food/'+idea.tile+'.jpg'} alt="" loading="lazy" width="112" height="88"/>
+          <span>{idea.title}</span><ChevronDown size={18} aria-hidden="true"/>
+        </summary>
+        <div className="food-recipe-body">
+          <p>{idea.description}</p><h3>Alternativas</h3><p>{idea.swap}</p><p className="food-tip">{idea.tip}</p>
+        </div>
+      </details>)}
+    </div>
+    <section className="card food-reference" aria-label="Referencias de alimentación">
+      <details>
+        <summary>Menú semanal de referencia</summary>
+        <label>Día del menú<select value={day} onChange={event=>setDay(+event.target.value)}>
+          {menu.map(item=><option key={item.day} value={item.day}>{item.name}</option>)}
+        </select></label>
+        {selected.meals.map(meal=><div className="menu-reference" key={meal.id}>
+          <h3>{meal.name}</h3>
+          <ul>{meal.ingredients.map(i=><li key={i.foodId}><span>{foods[i.foodId].name}</span><span>{fmt(i.amount)} {foods[i.foodId].unit==='unit'?'ud.':'g'}</span></li>)}</ul>
+          {!!meal.alternatives?.length&&<p className="small-note">Alternativas: {meal.alternatives.join(' · ')}</p>}
+        </div>)}
+        <p className="small-note">Estimación del día: {fmt(total.kcal)} kcal · proteína {fmt(total.protein)} g · carbohidratos {fmt(total.carbs)} g · grasas {fmt(total.fat)} g.</p>
+        <p className="source-note">Los valores genéricos proceden principalmente de <a href="https://fdc.nal.usda.gov/data-documentation/" target="_blank" rel="noreferrer">USDA FoodData Central</a>. Comprueba la etiqueta de cada producto. Las cantidades se indican en crudo, salvo que se especifique otra cosa. El menú es orientativo.</p>
+      </details>
+      <details>
+        <summary>Cómo combinar tus comidas</summary>
+        <p>Combina alimentos que aporten proteína, verduras o fruta, carbohidratos y grasas que te gusten. Ajusta las cantidades a tu apetito y actividad.</p>
+        <p>Antes de entrenar, elige algo que digieras bien y deja el tiempo que necesites. Después puedes volver a tus comidas habituales.</p>
+      </details>
+    </section>
+  </div>
 }
