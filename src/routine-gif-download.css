@@ -1,0 +1,12 @@
+.routine-gif-download { margin-block: 12px; }
+.routine-gif-action {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; width: 100%; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 13px; background: var(--surface2); color: var(--text);
+  text-align: start; font: inherit; font-size: .9rem; font-weight: 650;
+}
+.routine-gif-action svg { flex: none; color: var(--olive); }
+.routine-gif-action:disabled { opacity: 1; cursor: default; }
+.routine-gif-action small { display: block; margin-top: 2px; color: var(--muted); font-size: .76rem; font-weight: 500; }
+.routine-gif-error, .routine-gif-missing { margin: 4px 0; font-size: .82rem; }
+.routine-gif-missing summary { min-height: 44px; align-content: center; color: var(--muted); }
+.routine-gif-missing ul { margin: 0; padding-inline-start: 22px; }

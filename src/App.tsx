@@ -13,6 +13,7 @@ import { HomeScreen, TrainingScreen, NutritionScreen, ProgressScreen, MoreScreen
 import ToolsScreen from './ToolsScreen'
 import BarbellCalculator, { initialBarSetup } from './BarbellCalculator'
 import { ExerciseWeightProvider } from './ExerciseWeight'
+import { RememberedGifShelf, SavedRoutineGifs } from './SavedRoutineGifs'
 import { useGymSettings } from './GymInventory'
 import { latestHipMark } from './lib/gym-inventory'
 import SectionSwitch from './SectionSwitch'
@@ -133,7 +134,7 @@ function Workspace(){
   const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   const themeControl=<button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button>
-  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="brand-signature"><b>Plan</b> Lolo &amp; alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu espacio personal'}</h1></div>{themeControl}</header><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
+  if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="brand-signature"><b>Plan</b> Lolo &amp; alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu espacio personal'}</h1></div>{themeControl}</header><RememberedGifShelf online={online}/><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
   if(!ready)return <div className="splash"><Koala/><p>{loadError?'No se han podido leer tus registros.':'Recuperando tu plan…'}</p>{loadError&&<button className="primary" onClick={()=>reload().catch(()=>setLoadError(true))}>Reintentar</button>}</div>
   const blockedUpdate=trainingDirty||policeUpdateBlocked||storage.saving||account.saving||!!storage.error||!!account.error
   const serviceNotice=<>
@@ -174,6 +175,7 @@ function Workspace(){
       <div className="header-actions"><SectionSwitch onClick={async()=>{if(trainingDirty&&!confirm('¿Salir sin guardar los cambios de la rutina?'))return;try{await account.flush();location.hash='#police'}catch{notify('Guarda los cambios pendientes antes de cambiar de apartado.')}}}/></div></header>
     {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
     <main className={`workspace workspace--${section}`} tabIndex={-1}>
+      {section==='training'&&(!reader||!online||!account.values['training:'+reader.date])&&<SavedRoutineGifs key={account.session.user.id} userId={account.session.user.id}/>}
       {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} floatingSessionDate={floatingWorkout?.date} startTraining={startTraining}
         onOpenPlates={()=>{if(go('nutrition'))setNavigation(v=>({...v,tool:'plates'}))}}
         onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}

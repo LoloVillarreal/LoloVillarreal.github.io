@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type SetStateAction } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
 import config from '../data/cloud-config.json'
+import { sessionStorageKey } from './media-owner'
 import { attendanceEntryValid } from './attendance'
 import { trainingEntryValid } from './training-plan'
 import { samePlan } from './today-replacement'
@@ -11,7 +12,7 @@ import type { Backup, ProgressLog } from '../types'
 import { backupJson, download } from './files'
 
 export const supabase=createClient(config.url,config.publishableKey,{
-  auth:{persistSession:true,autoRefreshToken:true},
+  auth:{persistSession:true,autoRefreshToken:true,storageKey:sessionStorageKey},
   global:{fetch:async(input,init)=>{
     const controller=new AbortController(),signal=init?.signal
     const abort=()=>controller.abort()

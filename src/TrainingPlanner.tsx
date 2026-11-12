@@ -15,6 +15,7 @@ import { catalogById, equipmentNames, exerciseById, exerciseImage, matchesExerci
 import { isoDate, parseDate } from './lib/dates'
 import { samePlan } from './lib/today-replacement'
 import { RoutineDuration } from './RoutineDuration'
+import { RoutineGifDownload } from './RoutineGifDownload'
 import { shortCustomPlan } from './lib/short-strength'
 
 const planChanged='La rutina guardada ha cambiado. Vuelve a abrirla para revisar los ejercicios.'
@@ -177,6 +178,7 @@ export function TrainingPlanner({date,initial,newRoutine,onSaved,onCancel,onDirt
           <p className="small-note">Se usan tus dos primeros ejercicios, con hasta dos series de cada uno y sus descansos habituales.</p>
         </div>}
       </>}
+      {plan.type==='strength' && <RoutineGifDownload key={date} exercises={(shortVersion??plan).exercises.flatMap(item=>exerciseById.get(item.exerciseId)??[])}/>}
       {message&&<p ref={messageRef} className="planner-message" role="status" tabIndex={-1}>{message}</p>}
       {!online&&<p role="status">Conéctate a internet para guardar tus cambios.</p>}
       {online&&!account.loading&&!account.complete&&<button className="text-button" onClick={()=>account.refresh().catch(()=>setMessage('No se pudieron cargar tus datos. Vuelve a intentarlo.'))}>Cargar mis datos para guardar</button>}

@@ -37,3 +37,83 @@ rumano-barra.v1.mp4 — «Barbell Romanian Deadlift», Capt. Matthew Holfinger, 
 Original y atribución: https://www.dvidshub.net/video/639927/barbell-romanian-deadlift
 Condiciones de uso: https://www.dvidshub.net/about/copyright
 The appearance of U.S. Department of War (DoW) visual information does not imply or constitute DoW endorsement.
+
+GIF DE LAS RUTINAS
+
+Los GIF hip-thrust-barra, rumano-mancuernas, curl-femoral, prensa,
+elevaciones-laterales y remo-polea (.v1.gif) proceden de los seis vídeos de
+Goulart citados arriba. Se convirtieron a GIF en bucle y se redujeron su
+resolución, paleta y frecuencia de imagen. Licencia CC BY-SA 4.0.
+rumano-barra.v1.gif se convirtió del fragmento de Capt. Matthew Holfinger
+acreditado arriba, igualmente reducido y en bucle.
+
+Las siguientes ilustraciones son de Bryl Lim (https://bryllim.com), del
+proyecto Workout Guide. Las poses derivadas de Everkinetic son obra
+original de Greg Priday (https://github.com/everkinetic/data).
+Las ilustraciones y sus adaptaciones en GIF se distribuyen bajo CC BY-SA
+4.0 Internacional: https://creativecommons.org/licenses/by-sa/4.0/
+Se seleccionaron las poses, se ajustaron el tamaño y el contraste y se
+montaron como secuencias. Para las planchas se conservó la postura
+isométrica y se añadió un indicador animado de respiración.
+Licencias y atribuciones de cada fotograma:
+https://github.com/bryllim/workout-guide/blob/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/manifest.json
+
+bulgara-mancuernas.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/bulgarian-split-squat/
+abduccion-maquina.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/hip-abduction-machine/
+jalon-al-pecho.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/lat-pulldown/
+remo-maquina.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/machine-row/
+press-pecho-maquina.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/machine-chest-press/
+plancha.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/plank/
+zancada-inversa-mancuernas.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/reverse-lunge/
+extension-rodilla.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/leg-extension/
+patada-gluteo-polea.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/cable-kickback/
+elevacion-piernas-colgada.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/hanging-leg-raise/
+plancha-lateral.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/side-plank/
+
+crunch-polea.v1.gif — diagrama animado original de PLAN Lolo & alexia:
+flexión de tronco de rodillas con polea alta. Se distribuye bajo CC BY-SA
+4.0 Internacional: https://creativecommons.org/licenses/by-sa/4.0/
+
+ALTERNATIVAS DEL PLAN
+
+curl-femoral-sentado.v1.gif — Goulart, wger, «Leg Curls (sitting)».
+Tramo del segundo 6,45 al 10,40, sin audio y adaptado a GIF en bucle.
+https://wger.de/api/v2/video/37/
+https://wger.de/media/exercise-video/366/43df4b79-d4c3-4fbf-bcb5-e0d825b84120.MOV
+press-mancuernas-banco.v1.gif — Goulart, wger, «Benchpress Dumbbells».
+Tramo del segundo 0,20 al 3,55, sin audio y adaptado a GIF en bucle.
+https://wger.de/api/v2/video/17/
+https://wger.de/media/exercise-video/75/080c799b-8afd-4130-8d72-9cef0cd79f54.MOV
+Ambas grabaciones y estos GIF se distribuyen con licencia CC BY-SA 4.0:
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Otras secuencias de Workout Guide, con las modificaciones y condiciones
+CC BY-SA 4.0 indicadas en el apartado anterior:
+sentadilla-multipower.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/smith-machine-squat/
+split-squat-mancuernas.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/split-squat/
+elevacion-rodillas-colgada.v1.gif — Bryl Lim
+https://bryllim.github.io/workout-guide/exercises/hanging-knee-raise/
+crunch-inverso.v1.gif — Bryl Lim / Everkinetic
+https://bryllim.github.io/workout-guide/exercises/reverse-crunch/
+
+Diagramas animados originales de PLAN Lolo & alexia con licencia
+CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/
+hip-thrust-maquina.v1.gif — empuje de cadera en máquina de palanca.
+crunch-maquina.v1.gif — flexión de tronco en máquina con apoyo de pecho.
+zancada-inversa-corporal.v1.gif — paso atrás sin carga externa.
+extension-rodilla-unilateral.v1.gif — extensión a una pierna en máquina.
+lateral-polea-unilateral.v1.gif — elevación lateral a una mano en polea baja.
+patada-gluteo-maquina.v1.gif — extensión de cadera con pedal de máquina.

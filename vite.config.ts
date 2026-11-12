@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['plan-la-apple-touch.png', 'offline.html'],
+      includeAssets: ['plan-la-apple-touch.png', 'offline.html', 'movimientos/CREDITOS.txt'],
       manifest: {
         name: 'PLAN Lolo & alexia',
         short_name: 'Lolo & alexia',

@@ -43,6 +43,10 @@ En Safari de iPhone: Compartir → Añadir a pantalla de inicio. Abrir la app e 
 
 Tras la primera carga, la guía y sus imágenes se pueden consultar offline. El progreso y las calculadoras necesitan internet para recuperarse o sincronizar. Los cambios pendientes se indican en pantalla; no cerrar hasta confirmar guardado, o exportarlos si hay un error.
 
+En **Entrenos**, abre la rutina y pulsa **Descargar los GIF de la rutina** antes de salir. Cuando veas **GIF listos sin conexión**, encontrarás los ejercicios en **Entrenos → Mis GIF sin conexión**, incluso si cierras y vuelves a abrir la app sin red con la sesión recordada. Se guarda una copia en ese dispositivo; cualquier ejercicio añadido del catálogo que solo tenga foto se indica por separado. Los créditos están en [movimientos/CREDITOS.txt](public/movimientos/CREDITOS.txt).
+
+Si la conexión impide renovar la sesión recordada, **Mis GIF sin conexión** también aparece en la pantalla de acceso: abre solo las demostraciones descargadas. Cerrar sesión retira ese acceso.
+
 ## Desarrollo y publicación
 
 Node.js 24:

@@ -1,0 +1,9 @@
+.saved-routine-gifs.card { padding: 0 16px; }
+.saved-routine-gifs > summary { min-height: 48px; padding: 13px 0; color: var(--olive); }
+.saved-routine-gifs > summary svg { display: inline; vertical-align: -.18em; margin: 0 .2em; }
+.saved-routine-gifs section { border-top: 1px solid var(--line); padding: 12px 0; }
+.saved-routine-gifs ol { list-style: decimal; margin: 6px 0 0; padding-left: 1.6em; }
+.saved-routine-gifs li::marker { color: var(--muted); font-size: .8em; }
+.saved-routine-gifs li button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; border: 0; background: none; padding: 4px; text-align: left; }
+.saved-routine-gifs li button svg { flex: none; color: var(--olive); }
+.saved-routine-gifs li small { display: block; color: var(--muted); }

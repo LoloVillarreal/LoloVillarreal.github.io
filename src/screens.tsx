@@ -3,6 +3,7 @@ import { techniqueFor } from './lib/exercise-technique'
 import ExercisePhoto from './ExercisePhoto'
 import { ExerciseWeightButton } from './ExerciseWeight'
 import { ExerciseMovement } from './ExerciseMovement'
+import { RoutineGifDownload } from './RoutineGifDownload'
 import BarbellDrawing from './BarbellDrawing'
 import { exerciseUnit } from './lib/exercise-library'
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
@@ -278,6 +279,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     <section className="card recorded-plan-options">
       <h2>Plan de este día</h2>
       {hasPlan && <button className="secondary full" onClick={()=>openGuide()}>Ver la guía de {selected.title}</button>}
+      {hasPlan && selected.type==='strength' && <RoutineGifDownload key={date} exercises={selected.exercises}/>}
       <button ref={choiceTrigger} className="text-button" onClick={()=>{initialKind.current=undefined;setPickingDate(date)}}>{hasPlan?'Cambiar mi elección':'Añadir un plan a este día'}</button>
       {hasPlan && <button className="text-button" onClick={()=>setEditing(true)}>Editar detalles</button>}
     </section>
@@ -313,6 +315,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     {attendanceControl}
     {selected.type==='strength' ? <section className="card routine-preview">
       <h2>Ejercicios del día</h2>
+      <RoutineGifDownload key={date} exercises={selected.exercises}/>
       {selected.exercises.length===0&&<p className="empty">Edita el plan de este día para añadir un ejercicio.</p>}
       {selected.exercises.map((exercise,index)=><div key={exercise.id} className="routine-preview-row">
         <ExercisePhoto exercise={exercise}/>
@@ -394,6 +397,7 @@ function SessionView({day,date,index,cardio,notes,preview,onStep,onExit,notify,o
         </button>:
         preview?<button className="secondary full" onClick={onExit}>Cerrar consulta</button>:<AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}
       {step>0&&<button className="text-button training-session-previous" onClick={event=>move(-1,event)}><ArrowLeft size={16}/>Ejercicio anterior</button>}
+      <RoutineGifDownload key={'gifs:'+date} exercises={day.exercises}/>
     </div>:<>
       <NonStrengthGuide day={day} cardio={cardio}/>
       {preview?<button className="secondary full" onClick={onExit}>Cerrar consulta</button>:<AttendanceControl key={date} date={date} day={day} notify={notify} finishGuide onRegistered={onRegistered}/>}

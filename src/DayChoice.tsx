@@ -12,6 +12,7 @@ import { CardioPicker } from './CardioPicker'
 import { TrainingPlanner } from './TrainingPlanner'
 import { twentyMinuteRoutine } from './lib/short-strength'
 import { RoutineDuration } from './RoutineDuration'
+import { RoutineGifDownload } from './RoutineGifDownload'
 
 const noDirtyChange = () => {}
 type DayChoiceProps = {
@@ -171,6 +172,7 @@ export function DayChoice({date,initialKind,onBegin,onSaved,onCancel,previousPla
         <ExercisePhoto exercise={exercise}/><div><strong>{exercise.name}</strong><small>{exercise.sets} series · {exercise.reps.join('–')} {exercise.unit==='seconds'?'s':'reps'}</small></div>
       </article>)}</div>:<p>{minutes} minutos de {cardioLabel(activity).toLocaleLowerCase('es')}.</p>}
     </section>}
+    {kind==='strength' && strength && <RoutineGifDownload key={date} exercises={strength.exercises}/>}
     {kind&&ready&&<div className="choice-save-actions">
       {date===isoDate()&&kind!=='recovery'&&!returnToRecord&&online&&!written.current&&<button type="button" className="primary full" disabled={busy||!account.complete} onClick={()=>save(true)}>
         <Play size={17} aria-hidden="true"/>{busy?'Guardando…':'Guardar y empezar'}

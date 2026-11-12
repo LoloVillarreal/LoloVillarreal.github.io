@@ -1,26 +1,91 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronUp, Download, Play } from 'lucide-react'
+import { Check, ChevronUp, Download, Play, Square, Video } from 'lucide-react'
+import { routineGifs, type RoutineGif } from './data/routine-gifs'
+import { loadRoutineGif } from './lib/routine-gif-cache'
 import { loadMotion, motionCache, motionClips, motionURL, type MotionClip } from './lib/exercise-motion'
 import { exerciseImage } from './lib/exercise-library'
 import type { Exercise } from './types'
 import './exercise-movement.css'
 
-export function ExerciseMovement({exercise}:{exercise:Exercise}) {
-  const clip=motionClips[exercise.hevyId]
-  return clip ? <MovementDisclosure key={exercise.hevyId} clip={clip} name={exercise.name} poster={exerciseImage(exercise)}/> : null
+type MovementProps={exercise:Exercise;showPoster?:boolean;startGif?:boolean}
+export function ExerciseMovement(props:MovementProps) {
+  return <MovementGuide key={props.exercise.hevyId} {...props}/>
 }
 
-function MovementDisclosure({clip,name,poster}:{clip:MotionClip;name:string;poster:string}) {
-  const [open,setOpen]=useState(false)
+function MovementGuide({exercise,showPoster=false,startGif=false}:MovementProps) {
+  const gif=routineGifs[exercise.hevyId], clip=motionClips[exercise.hevyId]
+  const poster=exerciseImage(exercise), name=exercise.name
+  const [mode,setMode]=useState<'gif'|'video'|null>(startGif&&gif?'gif':null)
   const panelId=useId()
-  return <div className="exercise-movement">
-    <button type="button" className="movement-toggle" aria-expanded={open} aria-controls={panelId} onClick={()=>setOpen(!open)}>
-      {open?<ChevronUp size={17} aria-hidden="true"/>:<Play size={17} aria-hidden="true"/>}
-      <span>{open?'Ocultar movimiento':'Ver el movimiento'}</span>
-      <small>{Math.round(clip.seconds)} s · {Math.ceil(clip.bytes/1000)} kB</small>
-    </button>
-    <div id={panelId}>{open&&<Player clip={clip} name={name} poster={poster}/>}</div>
+
+  useEffect(()=>{
+    if(mode!=='gif')return
+    const preference=window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    const motionChanged=()=>{if(preference?.matches)setMode(null)}
+    const hidden=()=>{if(document.hidden)setMode(null)}
+    preference?.addEventListener('change',motionChanged)
+    document.addEventListener('visibilitychange',hidden)
+    return ()=>{
+      preference?.removeEventListener('change',motionChanged)
+      document.removeEventListener('visibilitychange',hidden)
+    }
+  },[mode])
+
+  if(!showPoster&&!gif&&!clip)return null
+  const media=<div id={panelId}>
+    {mode==='gif'&&gif?<GifPlayer gif={gif} name={name} poster={poster}/>
+      :mode==='video'&&clip?<Player clip={clip} name={name} poster={poster}/>
+      :showPoster?<ExercisePoster poster={poster} name={name}/>:null}
   </div>
+  const controls=(gif||clip)&&<div className="movement-actions">
+    {gif&&<button type="button" className="movement-toggle" aria-pressed={mode==='gif'} aria-controls={panelId}
+      onClick={()=>setMode(mode==='gif'?null:'gif')}>
+      {mode==='gif'?<Square size={16} aria-hidden="true"/>:<Play size={17} aria-hidden="true"/>}
+      {mode==='gif'?'Detener GIF':'Ver GIF'}
+    </button>}
+    {clip&&<button type="button" className={gif?'text-button movement-video-toggle':'movement-toggle'} aria-expanded={mode==='video'}
+      aria-controls={panelId} onClick={()=>setMode(mode==='video'?null:'video')}>
+      {mode==='video'?<ChevronUp size={16} aria-hidden="true"/>:<Video size={16} aria-hidden="true"/>}
+      {mode==='video'?'Cerrar vídeo':'Ver vídeo'}
+    </button>}
+  </div>
+  return <div className={showPoster?'movement-hero':'exercise-movement'}>
+    {showPoster?<>{media}{controls}</>:<>{controls}{media}</>}
+  </div>
+}
+
+function ExercisePoster({poster,name}:{poster:string;name:string}) {
+  return <img className="exercise-details-image" src={poster} alt={'Demostración de '+name}
+    width="432" height="432" onError={({currentTarget})=>{
+      if(currentTarget.getAttribute('src')!=='./exercise-placeholder.svg')currentTarget.src='./exercise-placeholder.svg'
+    }}/>
+}
+
+function GifPlayer({gif,name,poster}:{gif:RoutineGif;name:string;poster:string}) {
+  const [url,setUrl]=useState(''),[error,setError]=useState(''),[attempt,setAttempt]=useState(0)
+  useEffect(()=>{
+    const controller=new AbortController()
+    let objectURL=''
+    setUrl('')
+    setError('')
+    loadRoutineGif(gif,controller.signal).then(blob=>{
+      if(controller.signal.aborted)return
+      objectURL=URL.createObjectURL(blob)
+      setUrl(objectURL)
+    }).catch(()=>{
+      if(!controller.signal.aborted)setError(navigator.onLine
+        ?'No se pudo cargar el GIF. Comprueba la conexión o reintenta la descarga de la rutina.'
+        :'Este GIF no está disponible sin conexión. Descarga la rutina cuando recuperes la conexión.')
+    })
+    return ()=>{controller.abort();if(objectURL)URL.revokeObjectURL(objectURL)}
+  },[gif,attempt])
+  return <figure className="movement-gif">
+    {url&&!error?<img src={url} alt={'Movimiento de '+name}
+      onError={()=>setError('No se pudo mostrar la animación de este ejercicio.')}/>:<ExercisePoster poster={poster} name={name}/>}
+    <figcaption>{error?<><span role="status">{error}</span>{' '}
+      <button type="button" className="text-button" onClick={()=>setAttempt(n=>n+1)}>Reintentar GIF</button></>
+      :url?<a href="./movimientos/CREDITOS.txt" target="_blank" rel="noreferrer">Créditos del GIF</a>:<span role="status">Cargando GIF…</span>}</figcaption>
+  </figure>
 }
 
 function Player({clip,name,poster}:{clip:MotionClip;name:string;poster:string}) {

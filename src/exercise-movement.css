@@ -1,4 +1,15 @@
 .exercise-movement { margin-block:8px; }
+.movement-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; }
+.movement-hero .movement-actions { margin:8px 18px 0; }
+.movement-actions .movement-toggle { flex:1 1 8rem; width:auto; justify-content:center; }
+.movement-actions .movement-video-toggle { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; }
+.movement-gif { margin:8px 0 0; }
+.movement-gif img { display:block; width:100%; height:clamp(160px,33dvh,280px); object-fit:contain; background:white; border-radius:12px; }
+.movement-hero .movement-gif { margin:0; }
+.movement-hero .movement-gif img { border-radius:0; }
+.movement-gif figcaption { min-height:28px; align-content:center; color:var(--muted); text-align:right; font-size:.75rem; }
+.movement-gif figcaption a { display:inline-block; padding:7px 3px; color:var(--muted); }
+.movement-hero .movement-gif figcaption,.movement-hero .movement-panel { padding-inline:18px; }
 .movement-toggle {
   display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:8px 12px;
   text-align:left; border:1px solid var(--line); border-radius:12px;
