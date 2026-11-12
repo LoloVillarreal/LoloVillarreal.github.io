@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { AttendanceControl } from './TrainingCalendar'
 import { useGuidePosition } from './lib/guide-position'
@@ -10,7 +10,7 @@ import { planFromRoutine } from './lib/training-plan'
 import { pendingWorkout } from './WorkoutReturn'
 
 const account=vi.hoisted(()=>({
-  session:{user:{id:'QA-A'}}, values:{} as Record<string,unknown>, complete:true, loading:false,
+  session:{user:{id:'QA-A'}}, values:{} as Record<string,unknown>, confirmedValues:{} as Record<string,unknown>, complete:true, loading:false,
   saving:false, error:'', set:vi.fn(), flush:vi.fn(), remove:vi.fn()
 }))
 vi.mock('./lib/account',()=>({useAccount:()=>account}))
@@ -21,11 +21,15 @@ vi.mock('./lib/storage',async importOriginal=>({
 beforeEach(()=>{
   localStorage.clear()
   account.values={}
+  account.confirmedValues={}
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')}
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')}
+  HTMLElement.prototype.scrollIntoView=vi.fn()
   account.flush.mockReset().mockResolvedValue(undefined)
   account.set.mockReset().mockImplementation((key:string,value:unknown)=>{account.values[key]=value})
   Object.defineProperty(navigator,'onLine',{configurable:true,value:true})
 })
-afterEach(()=>{cleanup();Object.defineProperty(navigator,'onLine',{configurable:true,value:true})})
+afterEach(()=>{cleanup();vi.useRealTimers();Object.defineProperty(navigator,'onLine',{configurable:true,value:true})})
 
 it('recupera el punto disponible si se acortó la rutina y retira el acceso si ya se registró o eliminó',()=>{
   const date='2026-11-12', position={date,index:2}
@@ -39,7 +43,7 @@ it('recupera el punto disponible si se acortó la rutina y retira el acceso si y
   expect(pendingWorkout(position,values,date)).toBeNull()
 })
 
-it.each(['futura','registrada'])('consultar una rutina %s no desplaza la sesión en curso ni modifica su asistencia',kind=>{
+it.each(['futura','registrada','pasada'])('consultar una rutina %s no desplaza la sesión en curso ni modifica su asistencia',kind=>{
   const date=kind==='futura'?'2099-01-01':'2026-10-19', plan=planFromRoutine(workoutDays[0])
   plan.notes='Nota ficticia para consultar'
   account.values['training:'+date]=plan
@@ -63,6 +67,7 @@ it.each(['futura','registrada'])('consultar una rutina %s no desplaza la sesión
 
 it('lets a reader jump to any exercise and return without registering or editing the day',()=>{
   const date='2026-10-19',routine=workoutDays[0]
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date(date+'T12:00:00'))
   account.values['training:'+date]=planFromRoutine(routine)
   const scroll=vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
   function Guide(){
@@ -94,7 +99,7 @@ it('lets a reader jump to any exercise and return without registering or editing
     const last=routine.exercises[routine.exercises.length-1]
     fireEvent.click(screen.getByRole('button',{name:routine.exercises.length+' '+last.name}))
     expect(document.activeElement).toBe(screen.getByRole('heading',{name:last.name}))
-    expect(screen.getByRole('button',{name:'Terminar y registrar'})).toBeTruthy()
+    expect(screen.getByRole('button',{name:'Finalizar entrenamiento'})).toBeTruthy()
     fireEvent.click(screen.getByRole('button',{name:'Ejercicio anterior'}))
     expect(document.activeElement).toBe(screen.getByRole('heading',{name:routine.exercises[routine.exercises.length-2].name}))
     expect(account.set).not.toHaveBeenCalled()
@@ -103,6 +108,7 @@ it('lets a reader jump to any exercise and return without registering or editing
 
 it('moves focus into the cardio guide when starting it',()=>{
   const date='2026-10-21'
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date(date+'T12:00:00'))
   const cardio=workoutDays.find(day=>day.type==='cardio')!
   account.values['training:'+date]=planFromRoutine(cardio)
   const scroll=vi.spyOn(window,'scrollTo').mockImplementation(()=>{})
@@ -115,6 +121,67 @@ it('moves focus into the cardio guide when starting it',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Empezar cardio'}))
     expect(document.activeElement).toBe(screen.getByRole('region',{name:cardio.title}))
   } finally {scroll.mockRestore()}
+})
+
+it('consultar una ficha de hoy antes de empezar deja el cronómetro apagado',()=>{
+  const date='2026-10-19',routine=workoutDays[0]
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date(date+'T12:00:00'))
+  account.values['training:'+date]=planFromRoutine(routine)
+  const setReader=vi.fn()
+  render(<TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} reader={null} bookmark={null} setReader={setReader} finish={vi.fn()} onDirtyChange={vi.fn()}/>)
+  fireEvent.click(screen.getByRole('button',{name:new RegExp('^'+routine.exercises[1].name+' .*series')}))
+  expect(screen.getByRole('heading',{name:routine.exercises[1].name})).toBeTruthy()
+  expect(screen.queryByRole('timer')).toBeNull()
+  expect(screen.queryByRole('button',{name:'Cancelar entrenamiento'})).toBeNull()
+  fireEvent.click(screen.getByRole('button',{name:'Volver a la rutina'}))
+  expect(setReader).not.toHaveBeenCalled()
+})
+
+it('cancelar permite seguir y descartar sólo el marcador y el reloj del entrenamiento',()=>{
+  const date='2026-10-19',plan=planFromRoutine(workoutDays[0])
+  const saved={['training:'+date]:plan,'progress:anterior':{weight:12}}
+  account.values={...saved}
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date(date+'T12:00:00'))
+  function Guide(){const position=useGuidePosition('QA-A')
+    return <TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} {...position} onDirtyChange={vi.fn()}/>}
+  render(<Guide/>)
+  fireEvent.click(screen.getByRole('button',{name:'Empezar entrenamiento'}))
+  fireEvent.click(screen.getByRole('button',{name:'Siguiente ejercicio '+workoutDays[0].exercises[1].name}))
+  fireEvent.click(screen.getByRole('button',{name:'Cancelar entrenamiento'}))
+  const stay=screen.getByRole('button',{name:'Seguir entrenando'})
+  expect(document.activeElement).toBe(stay)
+  fireEvent.click(stay)
+  expect(screen.getByRole('heading',{name:workoutDays[0].exercises[1].name})).toBeTruthy()
+  fireEvent.click(screen.getByRole('button',{name:'Cancelar entrenamiento'}))
+  fireEvent.click(screen.getByRole('button',{name:'Descartar sesión'}))
+  expect(localStorage.getItem('la-guide:QA-A')).toBeNull()
+  expect(account.set).not.toHaveBeenCalled();expect(account.remove).not.toHaveBeenCalled()
+  expect(account.values).toEqual(saved)
+})
+
+it('sólo cierra tras confirmar la asistencia y guarda una vez la duración activa de una sesión pausada',async()=>{
+  const date='2026-10-19', key='attendance:'+date,started=new Date(date+'T12:00:00').getTime()
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(started)
+  account.values['training:'+date]=planFromRoutine(workoutDays[0])
+  let confirmSave!:()=>void
+  account.flush.mockResolvedValueOnce(undefined).mockImplementationOnce(()=>new Promise<void>(resolve=>{confirmSave=resolve}))
+  function Guide(){const position=useGuidePosition('QA-A')
+    return <TrainingScreen date={date} setDate={vi.fn()} notify={vi.fn()} {...position} onDirtyChange={vi.fn()}/>}
+  const view=render(<Guide/>)
+  fireEvent.click(screen.getByRole('button',{name:'Empezar entrenamiento'}))
+  vi.setSystemTime(started+73100)
+  fireEvent.click(screen.getByRole('button',{name:'Pausar'}))
+  vi.setSystemTime(started+95000)
+  fireEvent.click(screen.getByRole('button',{name:'Finalizar'}))
+  const button=within(screen.getByRole('dialog',{name:'¿Finalizar entrenamiento?'})).getByRole('button',{name:'Guardar entrenamiento'})
+  await act(async()=>{fireEvent.click(button);fireEvent.click(button)})
+  expect(account.set).toHaveBeenCalledTimes(1)
+  expect(account.values[key]).toMatchObject({date,durationSeconds:73})
+  expect(localStorage.getItem('la-guide:QA-A')).toBeTruthy()
+  await act(async()=>{account.confirmedValues[key]=account.values[key];confirmSave()})
+  view.rerender(<Guide/>)
+  expect(localStorage.getItem('la-guide:QA-A')).toBeNull()
+  expect(screen.getByText(/Duración 01:13/)).toBeTruthy()
 })
 
 it('remembers the guide after reopening, isolates accounts and keeps the place when the summary opens',()=>{

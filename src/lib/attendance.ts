@@ -1,11 +1,12 @@
 import { addDays, isoDate, mondayOf, parseDate, validDate } from './dates'
 
-export type Attendance={date:string;title:string;type:'strength'|'cardio';completedAt:string}
+export type Attendance={date:string;title:string;type:'strength'|'cardio';completedAt:string;durationSeconds?:number}
 
 export function attendanceEntryValid(key:string,value:unknown):value is Attendance {
   if(!value||typeof value!=='object'||Array.isArray(value))return false
   const entry=value as Record<string,unknown>
-  if(Object.keys(entry).length!==4||Object.keys(entry).some(field=>!['date','title','type','completedAt'].includes(field)))return false
+  if(Object.keys(entry).some(field=>!['date','title','type','completedAt','durationSeconds'].includes(field)))return false
+  if('durationSeconds' in entry && (typeof entry.durationSeconds!=='number'||!Number.isSafeInteger(entry.durationSeconds)||entry.durationSeconds<0))return false
   return validDate(entry.date)&&key===`attendance:${entry.date}`&&
     typeof entry.title==='string'&&entry.title.trim().length>=1&&entry.title.trim().length<=100&&
     (entry.type==='strength'||entry.type==='cardio')&&!(parseDate(entry.date).getDay()===3&&entry.type==='strength')&&

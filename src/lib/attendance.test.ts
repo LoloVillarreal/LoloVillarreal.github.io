@@ -16,6 +16,10 @@ describe('días entrenados',()=>{
     expect(attendanceEntryValid('attendance:2026-10-19',{...entry,completedAt:'2026-10-19T25:00:00Z'})).toBe(false)
     expect(attendanceEntryValid('attendance:2026-10-19',{...entry,completedAt:'2026-10-19T18:00:00+02:00'})).toBe(true)
     expect(attendanceEntryValid('attendance:2026-10-19',{...entry,photo:'private'})).toBe(false)
+    expect(attendanceEntryValid('attendance:2026-10-19',{...entry,durationSeconds:0})).toBe(true)
+    expect(attendanceEntryValid('attendance:2026-10-19',{...entry,durationSeconds:3674})).toBe(true)
+    expect(attendanceEntryValid('attendance:2026-10-19',{...entry,durationSeconds:-1})).toBe(false)
+    expect(attendanceEntryValid('attendance:2026-10-19',{...entry,durationSeconds:2.5})).toBe(false)
     expect(attendanceEntryValid('attendance:2026-02-29',attended('2026-02-29'))).toBe(false)
   })
   it('permite cardio el miércoles y nunca fuerza',()=>{

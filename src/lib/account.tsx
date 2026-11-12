@@ -125,7 +125,8 @@ export function AccountProvider({children}:{children:ReactNode}){
             Date.parse(stored.data.updated_at)===Date.parse(row.updated_at) &&
             (isPlan ? trainingEntryValid(key,record) && samePlan(record,value) : samePreference(record,value))
           const matchesAttendance=checkAttendance && attendanceEntryValid(key,record) &&
-            record.completedAt===value.completedAt && record.title===value.title && record.type===value.type
+            record.completedAt===value.completedAt && record.title===value.title && record.type===value.type &&
+            record.durationSeconds===value.durationSeconds
           if(!matchesWrite && !matchesAttendance)throw new Error(conflict)
           confirmed=stored.data
         }else if(result.error){

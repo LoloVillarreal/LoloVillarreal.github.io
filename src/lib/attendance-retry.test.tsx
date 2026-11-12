@@ -23,10 +23,12 @@ vi.mock('@supabase/supabase-js',()=>({
 }))
 
 afterEach(()=>{cleanup();vi.resetAllMocks()})
-it.each([true,false])('accepts a retried insert only if its receipt matches (match=%s)', async match=>{
-  const data={date:'2026-11-09',type:'strength',title:'Sesión QA',completedAt:'2026-11-09T12:00:00.000Z'}
+it.each(['same','other-title','other-duration'])('checks the attendance receipt after a lost response (%s)', async scenario=>{
+  const data={date:'2026-11-09',type:'strength',title:'Sesión QA',durationSeconds:300,completedAt:'2026-11-09T12:00:00.000Z'}
+  const match=scenario==='same'
   fake.insert.mockResolvedValueOnce({error:{code:'offline'}}).mockResolvedValueOnce({error:{code:'23505'}})
-  fake.receipt.mockResolvedValue({data:{version:1,updated_at:data.completedAt,value:{data:{...data,title:match?data.title:'Otra rutina'}}}})
+  const receipt={...data,title:scenario==='other-title'?'Otra rutina':data.title,durationSeconds:scenario==='other-duration'?301:300}
+  fake.receipt.mockResolvedValue({data:{version:1,updated_at:data.completedAt,value:{data:receipt}}})
   const hook=renderHook(()=>useAccount(),{wrapper:AccountProvider})
   await waitFor(()=>expect(hook.result.current.complete).toBe(true))
   act(()=>hook.result.current.set('attendance:'+data.date,data))

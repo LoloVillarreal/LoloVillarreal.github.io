@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { useGuidePosition } from './lib/guide-position'
+import { useGuidePosition, type GuidePosition } from './lib/guide-position'
+import { trainingEntryValid } from './lib/training-plan'
+import { attendanceEntryValid } from './lib/attendance'
 import { selectRestSession } from './lib/rest-clock'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Check, Dumbbell, Home, Moon, RefreshCw, Wrench, Settings, Sparkles, Sun, TrendingUp, WifiOff } from 'lucide-react'
@@ -79,7 +81,13 @@ function Workspace(){
   const [toast,notify]=useState('')
   const [trainingDirty,setTrainingDirty]=useState(false)
   const [progressIntent,setProgressIntent]=useState<'strength'>()
-  const {reader,bookmark,setReader,finish}=useGuidePosition(account.session?.user.id)
+  const {reader,bookmark,setReader:changeReader,finish,pause,resume}=useGuidePosition(account.session?.user.id)
+  const [initialPreview,setInitialPreview]=useState<GuidePosition|null>(null)
+  const activeDate=bookmark?.date
+  const confirmedDay=activeDate && attendanceEntryValid('attendance:'+activeDate,account.confirmedValues['attendance:'+activeDate])
+  useEffect(()=>{
+    if(bookmark && confirmedDay && !account.saving)finish(bookmark.date,bookmark.clock?.startedAt)
+  },[bookmark,confirmedDay,account.saving,finish])
   const [registration,setRegistration]=useState<ServiceWorkerRegistration>()
   const [policeUpdateBlocked,setPoliceUpdateBlocked]=useState(false)
   const [cacheReady,setCacheReady]=useState(false)
@@ -118,20 +126,35 @@ function Workspace(){
   },[theme])
   useEffect(()=>{document.getElementById('fitness-scroll')?.scrollTo(0,0)},[navigation.section])
   useEffect(()=>{
-    const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day&&!trainingDirty)setNavigation(v=>({...v,day,section:'home',trainingDate:day,nutritionDate:day}))}
+    const sync=()=>{setOnline(navigator.onLine);const day=isoDate();if(day!==navigation.day&&!trainingDirty)setNavigation(v=>activeDate?{...v,day,nutritionDate:day}:{...v,day,section:'home',trainingDate:day,nutritionDate:day})}
     const dayTick=window.setInterval(sync,30000)
     window.addEventListener('online',sync);window.addEventListener('offline',sync);window.addEventListener('focus',sync);document.addEventListener('visibilitychange',sync)
     sync()
     return()=>{clearInterval(dayTick);window.removeEventListener('online',sync);window.removeEventListener('offline',sync);window.removeEventListener('focus',sync);document.removeEventListener('visibilitychange',sync)}
-  },[navigation.day,trainingDirty])
+  },[navigation.day,trainingDirty,activeDate])
   useEffect(()=>{if(toast){const id=setTimeout(()=>notify(''),4500);return()=>clearTimeout(id)}},[toast])
   const go=(section:NavSection,date?:string,tab?:'calc'|'tips'|'settings')=>{
     if(trainingDirty&&(section==='home'||section!==navigation.section||(date&&date!==navigation.trainingDate)||(tab&&tab!==navigation.tab))&&!confirm('Hay cambios sin guardar en tu rutina. ¿Quieres salir y descartarlos?'))return false
     setProgressIntent(undefined)
-    if(section==='training'&&reader&&date===reader.date)setReader(null)
+    setInitialPreview(null)
+    if(section==='training'&&reader&&date===reader.date)changeReader(null)
     setNavigation(v=>({...v,section:tab==='calc'?'nutrition':section,tool:tab==='calc'?'calc':'',...(date?{trainingDate:date}:{}),...(tab?{tab:tab==='calc'?'settings':tab}:{})}));return true
   }
-  const startTraining=(date:string,index=0)=>{if(go('training',date))setReader({date,index})}
+  const setReader=(position:GuidePosition|null)=>{
+    if(position && activeDate && !confirmedDay && position.date!==activeDate) {
+      notify('Hay un entrenamiento pendiente. Ábrelo para finalizarlo o cancelarlo.')
+      return
+    }
+    changeReader(position)
+  }
+  const startTraining=(date:string,index=0)=>{
+    const plan=account.values['training:'+date]
+    const consultation=trainingEntryValid('training:'+date,plan) && plan.type==='recovery'
+    if(!go('training',date))return
+    if(consultation){setInitialPreview({date,index});return}
+    if(bookmark?.date===date && bookmark.clock?.runningSince===null)resume(date)
+    setReader({date,index})
+  }
   const emergencyCopy=()=>download(backupJson({schemaVersion:2,exportedAt:new Date().toISOString(),workoutLogs,cardioLogs,progressLogs,mealChecks:checks,settings,localState:storage.values}),'plan-la-recuperacion.json')
   const themeControl=<button className="icon-button theme-cycle" aria-label="Cambiar tema" title={`Tema: ${themes.find(item=>item.id===theme)?.label}`} onClick={()=>saveSettings(v=>{const next=themes[(themes.findIndex(item=>item.id===currentTheme(v))+1)%themes.length].id;return {...v,theme:next,darkMode:next==='dark'}})}>{theme==='glass'?<Sparkles/>:theme==='dark'?<Sun/>:<Moon/>}</button>
   if(!account.session)return <div className="access-shell"><header><Koala/><div><p className="brand-signature"><b>Plan</b> Lolo &amp; alexia</p><h1>{route==='#prueba-gimnasio'?'Práctica de gimnasio':'Tu espacio personal'}</h1></div>{themeControl}</header><RememberedGifShelf online={online}/><AccountPanel practice={route==='#prueba-gimnasio'}/></div>
@@ -161,7 +184,8 @@ function Workspace(){
   if(police)return <>{serviceNotice}{toast&&<p className="toast" role="status">{toast}</p>}<Suspense fallback={<div className="splash">Abriendo tu panel…</div>}><PolicePanel key={account.session.user.id} themeControl={themeControl} onUpdateBlockedChange={setPoliceUpdateBlocked} onExit={()=>{setNavigation(v=>({...v,section:'training'}));location.hash=''}}/></Suspense></>
   const legacyCalc=navigation.section==='more'&&navigation.tab==='calc'
   const section=legacyCalc?'nutrition':navigation.section
-  const floatingWorkout=section==='training'?null:pendingWorkout(reader,account.values,isoDate())
+  const activeWorkout=pendingWorkout(bookmark,account.values,isoDate(),account.confirmedValues)
+  const floatingWorkout=section==='home'||section==='training'&&activeWorkout?.date===navigation.trainingDate?null:activeWorkout
   const cacheMessage=cacheReady?'Guía disponible sin conexión':cacheError||!('serviceWorker' in navigator)?'Guía disponible con conexión':'Preparando la guía para usarla sin conexión…'
   return <ExerciseWeightProvider value={exerciseCalculator}><div className="fitness-viewport" style={keyboardHeight ? {height:keyboardHeight} : undefined}>
     <div id="fitness-scroll"><div className="app-shell">
@@ -176,10 +200,10 @@ function Workspace(){
     {(section==='more'||storage.error||storage.saving||(!cacheReady&&section==='home')) && <div className={`save-state ${storage.error?'failed':''}`} role="status" aria-live="polite">{storage.error?<><span>{storage.error}</span><button onClick={()=>storage.flush().catch(()=>{})}>Reintentar</button><button onClick={emergencyCopy}>Exportar cambios</button></>:<><Check size={14}/>{storage.saving?'Guardando preferencia…':cacheMessage}</>}</div>}
     <main className={`workspace workspace--${section}`} tabIndex={-1}>
       {section==='training'&&(!reader||!online||!account.values['training:'+reader.date])&&<SavedRoutineGifs key={account.session.user.id} userId={account.session.user.id}/>}
-      {section==='home'&&<HomeScreen key={homeVisit} onSelectionSaved={()=>finish(isoDate())} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} floatingSessionDate={floatingWorkout?.date} startTraining={startTraining}
+      {section==='home'&&<HomeScreen key={homeVisit} onDirtyChange={setTrainingDirty} go={go} reader={bookmark} startTraining={startTraining}
         onOpenPlates={()=>{if(go('nutrition'))setNavigation(v=>({...v,tool:'plates'}))}}
         onStrength={()=>{if(go('progress'))setProgressIntent('strength')}}/>}
-      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>setNavigation(v=>({...v,trainingDate:date}))} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} finish={finish} onDirtyChange={setTrainingDirty}/>}
+      {section==='training'&&<TrainingScreen date={navigation.trainingDate} setDate={date=>{setInitialPreview(null);setNavigation(v=>({...v,trainingDate:date}))}} notify={notify} reader={reader} bookmark={bookmark} setReader={setReader} initialPreview={initialPreview} pause={pause} resume={resume} discard={finish} finish={finish} onDirtyChange={setTrainingDirty}/>}
       {section==='nutrition'&&<ToolsScreen notify={notify} tool={legacyCalc?'calc':navigation.tool??''}
         barCalculator={<BarbellCalculator setup={barSetup} setSetup={setBarSetup} gym={gym}/>}
         setTool={tool=>setNavigation(v=>({...v,section:'nutrition',tool,tab:'settings'}))}/>}

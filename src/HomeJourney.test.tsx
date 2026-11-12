@@ -24,7 +24,7 @@ it('mantiene el punto de lectura al abrir sin datos y reanuda cuando vuelve la r
   const props={go,reader:{date,index:2},startTraining,onStrength:vi.fn(),onOpenPlates:vi.fn()}
   account.complete=false
   const {rerender}=render(<HomeScreen {...props}/>)
-  expect(screen.getByRole('heading',{name:'Tu sesión está en pausa'})).toBeTruthy()
+  expect(screen.getByRole('heading',{name:'Sesión pendiente'})).toBeTruthy()
   expect(screen.getByText(/Te quedaste en el ejercicio 3/)).toBeTruthy()
   expect(screen.queryByRole('button',{name:'Fuerza'})).toBeNull()
   fireEvent.click(screen.getByRole('button',{name:'Abrir herramientas'}))
@@ -32,7 +32,7 @@ it('mantiene el punto de lectura al abrir sin datos y reanuda cuando vuelve la r
   account.values['training:'+date]=planFromRoutine(workoutDays[0])
   account.complete=true
   rerender(<HomeScreen {...props}/>)
-  fireEvent.click(screen.getByRole('button',{name:/Continuar · ejercicio 3/}))
+  fireEvent.click(screen.getByRole('button',{name:/Continuar entrenamiento.*Ejercicio 3 de/}))
   expect(startTraining).toHaveBeenCalledWith(date,2)
   expect(account.set).not.toHaveBeenCalled()
 })
@@ -111,8 +111,9 @@ it('mantiene el registro visible y abre la elección histórica solo por petici�
 it('abre la calculadora o todas las herramientas sin registrar ni empezar el entrenamiento pendiente',()=>{
   const go=vi.fn(), onOpenPlates=vi.fn(), startTraining=vi.fn()
   account.values['training:'+wednesday]=planFromRoutine(workoutDays.find(day=>day.type==='cardio')!)
-  render(<HomeScreen go={go} reader={{date:wednesday,index:0}} floatingSessionDate={wednesday} startTraining={startTraining} onStrength={vi.fn()} onOpenPlates={onOpenPlates}/>)
-  expect(screen.queryByRole('button',{name:/Continuar|Empezar cardio/})).toBeNull()
+  render(<HomeScreen go={go} reader={{date:wednesday,index:0}} startTraining={startTraining} onStrength={vi.fn()} onOpenPlates={onOpenPlates}/>)
+  expect(screen.getAllByRole('button',{name:/Continuar entrenamiento/})).toHaveLength(1)
+  expect(screen.queryByRole('button',{name:/Empezar cardio/})).toBeNull()
   fireEvent.click(screen.getByRole('button',{name:/Calcular peso de la barra/}))
   expect(onOpenPlates).toHaveBeenCalledOnce()
   expect(go).not.toHaveBeenCalled()
