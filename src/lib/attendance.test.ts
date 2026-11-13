@@ -68,9 +68,9 @@ describe('días entrenados',()=>{
     day.exercises.reverse()
     expect(receipt.exerciseNames).toEqual(['Peso muerto rumano con barra','Hip thrust en máquina','Hip thrust con barra','Plancha'])
     expect(receipt.performedSets).toEqual([
-      {exerciseIndex:1,unit:'reps',sets:[{number:2,kg:20.5,amount:9}]},
-      {exerciseIndex:2,unit:'reps',sets:[{number:1,kg:0},{number:3,amount:8}],replaced:true},
-      {exerciseIndex:3,unit:'seconds',sets:[{number:1,amount:40}],replaced:true},
+      {exerciseIndex:1,hevyId:'68CE0B9B',unit:'reps',sets:[{number:2,kg:20.5,amount:9}]},
+      {exerciseIndex:2,hevyId:'D57C2EC7',unit:'reps',sets:[{number:1,kg:0},{number:3,amount:8}],replaced:true},
+      {exerciseIndex:3,hevyId:'C6C9B8A0',unit:'seconds',sets:[{number:1,amount:40}],replaced:true},
     ])
     expect(attendanceEntryValid('attendance:'+date,receipt)).toBe(true)
     expect(createAttendance(date,day,{setLog:{}})).not.toHaveProperty('performedSets')
@@ -81,6 +81,9 @@ describe('días entrenados',()=>{
     const group={exerciseIndex:1,unit:'seconds',sets:[{number:1,kg:0,amount:30}]}
     expect(attendanceEntryValid(key,receipt)).toBe(true)
     expect(attendanceEntryValid(key,{...receipt,performedSets:[group]})).toBe(true)
+    expect(attendanceEntryValid(key,{...receipt,performedSets:[{...group,hevyId:'32HKJ34K'}]})).toBe(true)
+    for(const hevyId of [23,'1234567','D57 2EC7','D57C2EC7extra'])
+      expect(attendanceEntryValid(key,{...receipt,performedSets:[{...group,hevyId}]})).toBe(false)
     for(const performedSets of [[],[group,group],[{...group,exerciseIndex:2}],[{...group,unit:'kg'}],
       [{...group,sets:[{number:1}]}],[{...group,sets:[{number:1,kg:Infinity}]}],[{...group,sets:[{number:1,amount:2.5}]}],
       [{...group,sets:[{number:2,kg:5},{number:1,kg:6}]}],[{...group,exerciseIndex:0,replaced:true}]]){

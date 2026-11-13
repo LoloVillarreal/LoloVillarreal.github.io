@@ -5,12 +5,13 @@ import { ExerciseWeightButton } from './ExerciseWeight'
 import { ExerciseMovement } from './ExerciseMovement'
 import { ExerciseSetLog } from './ExerciseSetLog'
 import type { SetEntry, SetLog } from './lib/workout-sets'
+import { previousExerciseSets } from './lib/previous-exercise-sets'
 import { ActiveSessionControls, type SessionReview } from './ActiveSessionControls'
 import { RoutineGifDownload } from './RoutineGifDownload'
 import BarbellDrawing from './BarbellDrawing'
 import { WorkoutReturn, pendingWorkout } from './WorkoutReturn'
 import { exerciseUnit } from './lib/exercise-library'
-import { useCallback, useEffect, useRef, useState, type ReactNode, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SetStateAction } from 'react'
 import { Apple, ArrowLeft, Calculator, Check, ChevronDown, ChevronRight, Dumbbell, Heart, Play, Salad } from 'lucide-react'
 import { workoutDays, hevyExport } from './data/training'
 import { foods, menu } from './data/nutrition'
@@ -245,7 +246,7 @@ export function TrainingScreen({date,setDate,notify,reader,bookmark,setReader,fi
     onDirtyChange(dirty)
   },[onDirtyChange])
   const saved=account.values[`training:${date}`],hasPlan=trainingEntryValid(`training:${date}`,saved)
-  const selected=workoutForDate(date,hasPlan?saved:undefined)
+  const selected=useMemo(()=>workoutForDate(date,hasPlan?saved:undefined),[date,hasPlan,saved])
   const recorded = attendanceEntryValid('attendance:'+date,account.values['attendance:'+date])
   const confirmed = attendanceEntryValid('attendance:'+date,account.confirmedValues?.['attendance:'+date])
   const active = bookmark?.date===date && hasPlan && saved.type!=='recovery' && !confirmed
@@ -378,6 +379,10 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
   const count=day.exercises.length
   const step=Math.max(0,Math.min(index,count-1))
   const exercise=day.exercises[step]
+  const {confirmedValues}=useAccount()
+  const loggingSets=!preview && !!onSet && day.type==='strength'
+  const previous=useMemo(()=>loggingSets && exercise && confirmedValues
+    ? previousExerciseSets(confirmedValues,date,exercise) : undefined,[loggingSets,confirmedValues,date,exercise])
   const page=useRef<HTMLElement>(null)
   const [indexOpen,setIndexOpen]=useState(false)
   const [review,setReview]=useState<SessionReview>(null)
@@ -430,7 +435,7 @@ function SessionView({day,date,index,cardio,notes,preview,clock,pause,resume,dis
     {exercise?<div className="card training-session-card">
       {count>1&&<div className="session-position-track" aria-hidden="true"><i style={{transform:`scaleX(${(step+1)/count})`}}/></div>}
       <ExerciseGuide exercise={exercise}>{!preview&&day.type==='strength'&&onSet&&
-        <ExerciseSetLog key={'sets:'+exercise.id} exercise={exercise} sets={setLog?.[exercise.id]??[]} disabled={pendingSave}
+        <ExerciseSetLog key={'sets:'+exercise.id} exercise={exercise} previous={previous} sets={setLog?.[exercise.id]??[]} disabled={pendingSave}
           onChange={entry=>onSet(exercise.id,entry)}/>}</ExerciseGuide>
       <MachineSettings exerciseId={exercise.hevyId}/>
       {!preview&&<TodayReplacement date={date} exercise={exercise} index={step}/>}

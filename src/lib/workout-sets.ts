@@ -3,7 +3,7 @@ import { exerciseById } from './exercise-library'
 
 export type SetEntry = { number: number; kg?: number; amount?: number }
 export type SetLog = Record<string, SetEntry[]>
-export type PerformedExercise = { exerciseIndex: number; unit: NonNullable<Exercise['unit']>; sets: SetEntry[]; replaced?: true; perSide?: true }
+export type PerformedExercise = { exerciseIndex: number; hevyId?: string; unit: NonNullable<Exercise['unit']>; sets: SetEntry[]; replaced?: true; perSide?: true }
 export const MAX_SET_NUMBER = 50
 export const MAX_SET_KG = 9999
 export const MAX_SET_AMOUNT = 99999
@@ -72,7 +72,7 @@ export function snapshotSets(exercises: Exercise[], draft?: SetLog) {
     const scheduled = new Set(exercises.map(exercise => exercise.id))
     exercises.forEach((exercise, exerciseIndex) => {
       const sets = log[exercise.id]
-      if (sets) performedSets.push({exerciseIndex, unit: exercise.unit ?? 'reps', ...(exercise.perSide && {perSide:true}), sets: sets.map(row => ({...row}))})
+      if (sets) performedSets.push({exerciseIndex, hevyId: exercise.hevyId, unit: exercise.unit ?? 'reps', ...(exercise.perSide && {perSide:true}), sets: sets.map(row => ({...row}))})
     })
     for (const [id, sets] of Object.entries(log)) {
       if (scheduled.has(id)) continue
@@ -80,7 +80,7 @@ export function snapshotSets(exercises: Exercise[], draft?: SetLog) {
       if (!exercise) continue
       const exerciseIndex = exerciseNames.length
       exerciseNames.push(exercise.name)
-      performedSets.push({exerciseIndex, unit: exercise.unit ?? 'reps', ...(exercise.perSide && {perSide:true}), sets: sets.map(row => ({...row})), replaced: true})
+      performedSets.push({exerciseIndex, hevyId: exercise.hevyId, unit: exercise.unit ?? 'reps', ...(exercise.perSide && {perSide:true}), sets: sets.map(row => ({...row})), replaced: true})
     }
   }
   return {exerciseNames, ...(performedSets.length > 0 && {performedSets})}
@@ -88,7 +88,8 @@ export function snapshotSets(exercises: Exercise[], draft?: SetLog) {
 
 export function validPerformedSets(value: unknown, namesLength: number): value is PerformedExercise[] {
   if (!Array.isArray(value) || !value.length || value.length > Math.min(namesLength, maxLoggedExercises)) return false
-  const validGroups = value.every((item, i) => isRecord(item) && Object.keys(item).every(key => ['exerciseIndex', 'unit', 'sets', 'replaced','perSide'].includes(key)) &&
+  const validGroups = value.every((item, i) => isRecord(item) && Object.keys(item).every(key => ['exerciseIndex', 'hevyId', 'unit', 'sets', 'replaced','perSide'].includes(key)) &&
+    (!('hevyId' in item) || (typeof item.hevyId === 'string' && /^[A-Z0-9]{8}$/.test(item.hevyId))) &&
     (!('perSide' in item) || item.perSide === true) &&
     (!('replaced' in item) || item.replaced === true) &&
     typeof item.exerciseIndex === 'number' && Number.isInteger(item.exerciseIndex) &&

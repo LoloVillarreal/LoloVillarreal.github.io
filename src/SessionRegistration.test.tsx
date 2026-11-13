@@ -165,6 +165,12 @@ it('sólo cierra tras confirmar la asistencia y guarda una vez la duración acti
   const date='2026-10-19', key='attendance:'+date,started=new Date(date+'T12:00:00').getTime()
   vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(started)
   account.values['training:'+date]=planFromRoutine(workoutDays[0])
+  const previousDate='2026-10-12', exerciseName=workoutDays[0].exercises[0].name
+  const previous={date:previousDate,title:'Sesión anterior',type:'strength',completedAt:previousDate+'T14:30:00Z',exerciseNames:[exerciseName],
+    performedSets:[{exerciseIndex:0,unit:'reps',sets:[{number:1,kg:42.5,amount:8}]}]}
+  account.confirmedValues['attendance:'+previousDate]=account.values['attendance:'+previousDate]=previous
+  account.values['attendance:2026-10-16']={...previous,date:'2026-10-16',completedAt:'2026-10-16T14:30:00Z',
+    performedSets:[{exerciseIndex:0,unit:'reps',sets:[{number:1,kg:99,amount:2}]}]}
   let confirmSave!:()=>void
   account.flush.mockResolvedValueOnce(undefined).mockImplementationOnce(()=>new Promise<void>(resolve=>{confirmSave=resolve}))
   function Guide(){const position=useGuidePosition('QA-A')
@@ -172,11 +178,14 @@ it('sólo cierra tras confirmar la asistencia y guarda una vez la duración acti
   const view=render(<Guide/>)
   fireEvent.click(screen.getByRole('button',{name:'Empezar entrenamiento'}))
   const editor=within(screen.getByRole('region',{name:'Mis series'}))
-  fireEvent.change(editor.getByLabelText('Peso en kg, serie 1'),{target:{value:'42,5'}})
-  fireEvent.change(editor.getByLabelText('Repeticiones, serie 1'),{target:{value:'8'}})
+  expect((editor.getByLabelText('Peso en kg, serie 1') as HTMLInputElement).value).toBe('')
+  fireEvent.click(editor.getByRole('button',{name:/Copiar serie 1.*42,5 kg.*8 reps/i}))
+  expect((editor.getByLabelText('Peso en kg, serie 1') as HTMLInputElement).value).toBe('42,5')
+  expect((editor.getByLabelText('Repeticiones, serie 1') as HTMLInputElement).value).toBe('8')
   fireEvent.change(editor.getByLabelText('Repeticiones, serie 3'),{target:{value:'5'}})
   fireEvent.click(screen.getByRole('button',{name:'Siguiente ejercicio '+workoutDays[0].exercises[1].name}))
   const secondEditor=within(screen.getByRole('region',{name:'Mis series'}))
+  expect(secondEditor.queryByRole('button',{name:/Copiar serie/i})).toBeNull()
   expect((secondEditor.getByLabelText('Peso en kg, serie 1') as HTMLInputElement).value).toBe('')
   fireEvent.change(secondEditor.getByLabelText('Repeticiones, serie 2'),{target:{value:'12'}})
   expect(account.set).not.toHaveBeenCalled()

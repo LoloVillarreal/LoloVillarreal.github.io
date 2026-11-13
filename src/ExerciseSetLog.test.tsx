@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { useState } from 'react'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ExerciseSetLog } from './ExerciseSetLog'
 import { WorkoutSummary } from './WorkoutSummary'
 import { workoutDays } from './data/training'
-import { replaceSet, type SetLog } from './lib/workout-sets'
+import { replaceSet, type SetEntry, type SetLog } from './lib/workout-sets'
 import type { Attendance } from './lib/attendance'
 import type { Exercise } from './types'
 
@@ -82,4 +82,61 @@ it('avisa si la sesión ya no acepta cambios y mantiene a la vista lo que se int
   fireEvent.blur(field)
   expect(field.value).toBe('25')
   expect(screen.getByText(/No se pudo guardar este cambio/)).toBeTruthy()
+})
+
+it('muestra la referencia sin rellenar hoy y copia de un toque solo los campos disponibles de esa serie', () => {
+  const previous = {date:'2026-11-09', sets:[{number:1,kg:0,amount:8}, {number:3,kg:22.5}]}
+  const write = vi.fn()
+  function Form() {
+    const [sets, setSets] = useState<SetEntry[]>([{number:3,amount:12}])
+    return <ExerciseSetLog exercise={{...exercise,sets:3}} sets={sets} previous={previous} onChange={entry=>{
+      write(entry)
+      setSets(rows=>[...rows.filter(row=>row.number!==entry.number),entry])
+    }}/>
+  }
+  render(<Form/>)
+  const region=screen.getByRole('region',{name:'Mis series'})
+  expect(region.querySelector('time')?.dateTime).toBe(previous.date)
+  const value=(name:string)=>(screen.getByRole('textbox',{name}) as HTMLInputElement).value
+  const copy=screen.getByRole('button',{name:'Copiar serie 1, 0 kg, 8 reps'})
+  expect(value('Peso en kg, serie 1')).toBe('')
+  expect(screen.queryByRole('button',{name:/Copiar serie 2/})).toBeNull()
+  expect(write).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByLabelText('Peso en kg, serie 1'),{target:{value:'bad'}})
+  fireEvent.click(copy)
+  expect(write).toHaveBeenCalledTimes(1)
+  expect(write).toHaveBeenLastCalledWith({number:1,kg:0,amount:8})
+  expect(value('Peso en kg, serie 1')).toBe('0')
+  expect(value('Repeticiones, serie 1')).toBe('8')
+  expect(screen.getByLabelText('Peso en kg, serie 1').getAttribute('aria-invalid')).toBeNull()
+  expect(screen.getByText('Serie 1 copiada.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button',{name:'Copiar serie 3, 22,5 kg'}))
+  expect(write).toHaveBeenLastCalledWith({number:3,kg:22.5,amount:12})
+  fireEvent.change(screen.getByLabelText('Peso en kg, serie 1'),{target:{value:''}})
+  expect(value('Peso en kg, serie 1')).toBe('')
+  expect(value('Repeticiones, serie 1')).toBe('8')
+})
+
+it('muestra unidades por lado y nunca confirma una copia rechazada o desactivada', () => {
+  const props={exercise:{...exercise,sets:1,unit:'seconds' as const,perSide:true},sets:[],
+    previous:{date:'2026-11-06',sets:[{number:1,amount:35}]},onChange:vi.fn(()=>false)}
+  const {rerender}=render(<ExerciseSetLog {...props}/>)
+  const copy=screen.getByRole('button',{name:'Copiar serie 1, 35 s por lado'})
+  fireEvent.click(copy)
+  expect(screen.getByRole('status').textContent).toBe('No se pudo copiar la serie.')
+  expect((screen.getByLabelText('Segundos, serie 1') as HTMLInputElement).value).toBe('')
+  rerender(<ExerciseSetLog {...props} disabled/>)
+  fireEvent.click(copy)
+  expect(props.onChange).toHaveBeenCalledTimes(1)
+})
+
+it('permite copiar una serie adicional de la sesión anterior y añadir el primer número libre', async () => {
+  const onChange=vi.fn()
+  render(<ExerciseSetLog exercise={{...exercise,sets:2}} sets={[]} previous={{date:'2026-11-06',sets:[{number:50,kg:10}]}} onChange={onChange}/>)
+  expect(screen.getAllByRole('rowheader').map(cell=>cell.textContent)).toEqual(['1','2','50'])
+  fireEvent.click(screen.getByRole('button',{name:'Copiar serie 50, 10 kg'}))
+  expect(onChange).toHaveBeenCalledWith({number:50,kg:10})
+  fireEvent.click(screen.getByRole('button',{name:'Añadir serie'}))
+  await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('Peso en kg, serie 3')))
+  expect(screen.getAllByRole('rowheader').map(cell=>cell.textContent)).toEqual(['1','2','3','50'])
 })
